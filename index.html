@@ -315,7 +315,7 @@ async function sendMessage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama3.2:3b',
+                model: OLLAMA_MODEL,
                 prompt: enhancePromptWithTime(buildPrompt2(text) + context, 'm2'),
                 stream: false
             })
@@ -354,7 +354,7 @@ async function sendMessage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama3.2:3b',
+                model: OLLAMA_MODEL,
                 prompt: enhancePromptWithTime(buildPrompt3(text) + context, 'm3'),
                 stream: false
             })
@@ -392,7 +392,7 @@ async function sendMessage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'llama3.2:3b',
+                    model: OLLAMA_MODEL,
                     prompt: buildDialoguePrompt_3to2(reply2),
                     stream: false
                 })
@@ -421,7 +421,7 @@ async function sendMessage() {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            model: 'llama3.2:3b',
+                            model: OLLAMA_MODEL,
                             prompt: buildDialoguePrompt_2to3(dialogue3to2),
                             stream: false
                         })
@@ -458,7 +458,7 @@ async function sendMessage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'llama3.2:3b',
+                    model: OLLAMA_MODEL,
                     prompt: buildSpontaneousPrompt(who, recentContext),
                     stream: false
                 })
@@ -1492,7 +1492,7 @@ ${who === 'm2' ? 'Используй (…) многоточия для пауз.
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: 'llama3.2:3b',
+                model: OLLAMA_MODEL,
                 prompt: prompt,
                 stream: false,
                 options: {
@@ -1614,7 +1614,7 @@ async function checkInitiative() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: 'llama3.2:3b',
+                        model: OLLAMA_MODEL,
                         prompt: responsePrompt,
                         stream: false,
                         options: { temperature: 0.85, num_predict: 40 }
