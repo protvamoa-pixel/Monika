@@ -311,7 +311,7 @@ async function sendMessage() {
 
     let reply2 = '';
     try {
-        const response = await fetch(`${OLLAMA_URL}/chat/completions`, {
+        const response = await fetch(`${OLLAMA_URL}/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -350,7 +350,7 @@ async function sendMessage() {
 
     let reply3 = '';
     try {
-        const response = await fetch(`${OLLAMA_URL}/chat/completions`, {
+        const response = await fetch(`${OLLAMA_URL}/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -388,7 +388,7 @@ async function sendMessage() {
 
         let dialogue3to2 = '';
         try {
-            const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+            const response = await fetch(`${OLLAMA_URL}/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -417,7 +417,7 @@ async function sendMessage() {
 
                 let dialogue2to3 = '';
                 try {
-                    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+                    const response = await fetch(`${OLLAMA_URL}/generate`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -454,7 +454,7 @@ async function sendMessage() {
         const recentContext = sharedHistory.slice(-4).map(m => m.content).join(' | ');
         let spontaneous = '';
         try {
-            const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+            const response = await fetch(`${OLLAMA_URL}/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
