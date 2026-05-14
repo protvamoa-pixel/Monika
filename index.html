@@ -964,37 +964,7 @@ function computeDelay(mem) {
   return Math.min(base, 5000);
 }
 
-  // === СПОНТАННАЯ МЫСЛЬ (15% шанс) ===
-  // Одна из них вспоминает что-то или добавляет мысль через паузу
-  if (!shouldDoDialogue && Math.random() < .15) {
-    const who = Math.random() < .55 ? 'm2' : 'm3';
-    const twId = `tw-${who}`;
-    await sleep(2500 + Math.random() * 3000);
-    document.getElementById(twId).classList.add('show');
-    await sleep(800 + Math.random() * 600);
-    const recentContext = sharedHistory.slice(-4).map(m => m.content).join(' | ');
-    let spontaneous = '';
-    try {
-      spontaneous = await callClaude(
-        buildSpontaneousPrompt(who, recentContext),
-        [{role:'user', content:'[добавь мысль]'}]
-      );
-    } catch(e) { spontaneous = ''; }
-    document.getElementById(twId).classList.remove('show');
-    if (spontaneous && spontaneous.length > 3) {
-      addMsg(who, spontaneous);
-      sharedHistory.push({role:who, content:spontaneous});
-    }
-  }
 
-  mem2.lastActive = Date.now();
-  mem3.lastActive = Date.now();
-  saveLocal();
-  syncAll();
-
-  isSending = false;
-  document.getElementById('send-btn').disabled = false;
-}
 
 // ============================================================
 // INPUT
