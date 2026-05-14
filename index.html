@@ -206,6 +206,93 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div id="notif"></div>
 
 <script>
+  // ========== НАСТРОЙКИ СЕРВЕРОВ ==========
+const OLLAMA_URL = 'https://woefully-awesome-swordtail.cloudpub.ru';
+const MEMORY_URL = 'https://suavely-stylish-drum.cloudpub.ru';
+
+// ========== УПРАВЛЕНИЕ ПАМЯТЬЮ ==========
+function getUserId() {
+    let userId = localStorage.getItem('monika_user_id');
+    if (!userId) {
+        userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('monika_user_id', userId);
+    }
+    return userId;
+}
+
+async function saveToMemory(role, content) {
+    try {
+        const response = await fetch(`${MEMORY_URL}/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: getUserId(),
+                role: role,
+                content: content
+            })
+        });
+        if (!response.ok) console.error('Save failed:', response.status);
+    } catch (e) {
+        console.error('Save error:', e);
+    }
+}
+
+async function searchMemory(query, limit = 5) {
+    try {
+        const response = await fetch(`${MEMORY_URL}/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: getUserId(),
+                query: query,
+                limit: limit
+            })
+        });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.results || [];
+    } catch (e) {
+        console.error('Search error:', e);
+        return [];
+    }
+}
+
+// ========== ФУНКЦИЯ ОТПРАВКИ СООБЩЕНИЯ ==========
+async function sendMessage(message) {
+    // 1. Сохраняем сообщение пользователя
+    await saveToMemory('user', message);
+    
+    // 2. Ищем похожие воспоминания
+    const memories = await searchMemory(message);
+    
+    // 3. Формируем контекст
+    let context = '';
+    if (memories.length > 0) {
+        context = '\n\nВот что ты помнишь из прошлых разговоров:\n';
+        for (const mem of memories) {
+            context += `[${mem.role}]: ${mem.content.substring(0, 200)}\n`;
+        }
+    }
+    
+    // 4. Отправляем запрос в Ollama
+    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: 'llama3.2:3b',
+            prompt: message + context,
+            stream: false
+        })
+    });
+    
+    const data = await response.json();
+    const reply = data.response;
+    
+    // 5. Сохраняем ответ Моники
+    await saveToMemory('monika', reply);
+    
+    return reply;
+}
 // ============================================================
 // CONFIG
 // ============================================================
