@@ -820,17 +820,7 @@ function analyzeMsg(text) {
     if (mem2.facts.length > 30) mem2.facts = mem2.facts.slice(-30);
     if (mem3.facts.length > 30) mem3.facts = mem3.facts.slice(-30);
     console.log(`📝 Запомнили план: ${plan}`);
-  }  // Запоминание имени (уже есть в вашем коде, но можно усилить)
-  const nameMatch = text.match(/меня зовут (\w+)/i) || text.match(/я (\w+)/i) || text.match(/называй меня (\w+)/i);
-  if (nameMatch && nameMatch[1] && nameMatch[1].length > 2) {
-    const name = nameMatch[1];
-    const nameFact = `его зовут ${name}`;
-    if (!mem2.facts.includes(nameFact)) {
-      mem2.facts.push(nameFact);
-      mem3.facts.push(nameFact);
-      console.log(`📝 Запомнили имя: ${name}`);
-    }
-  }
+  } 
   
   // Запоминание дня рождения
   const birthdayMatch = text.match(/день рождения (\d{1,2}[\.\/]\d{1,2})/i) || 
@@ -1260,7 +1250,7 @@ function buildSpontaneousPrompt(who, context) {
 //   OLLAMA_ORIGINS="*" ollama serve
 // Или в Windows: setx OLLAMA_ORIGINS "*" — потом перезапусти ollama
 // ============================================================
-
+const OLLAMA_MODEL = 'llama3.2:3b';
 
 async function callClaude(systemPrompt, messages) {
   // Склеиваем system + историю в один массив для Ollama
