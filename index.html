@@ -257,15 +257,32 @@ async function searchMemory(query, limit = 5) {
     }
 }
 
-// ========== ФУНКЦИЯ ОТПРАВКИ СООБЩЕНИЯ ==========
-async function sendMessage(message) {
-    // 1. Сохраняем сообщение пользователя
-    await saveToMemory('user', message);
-    
-    // 2. Ищем похожие воспоминания
-    const memories = await searchMemory(message);
-    
-    // 3. Формируем контекст
+// ============================================================
+// ОТПРАВКА СООБЩЕНИЯ (с памятью)
+// ============================================================
+let isSending = false;
+
+async function sendMessage() {
+    const inp = document.getElementById('input');
+    const text = inp.value.trim();
+    if (!text || isSending) return;
+    isSending = true;
+    document.getElementById('send-btn').disabled = true;
+    inp.value = '';
+    inp.style.height = '';
+
+    // 1. Отображаем сообщение пользователя
+    addMsg('user', text);
+    sharedHistory.push({ role: 'user', content: text });
+    analyzeMsg(text);
+
+    // 2. Сохраняем сообщение пользователя в память
+    await saveToMemory('user', text);
+
+    // 3. Ищем похожие воспоминания
+    const memories = await searchMemory(text, 5);
+
+    // 4. Формируем контекст из воспоминаний
     let context = '';
     if (memories.length > 0) {
         context = '\n\nВот что ты помнишь из прошлых разговоров:\n';
@@ -273,25 +290,198 @@ async function sendMessage(message) {
             context += `[${mem.role}]: ${mem.content.substring(0, 200)}\n`;
         }
     }
-    
-    // 4. Отправляем запрос в Ollama
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: 'llama3.2:3b',
-            prompt: message + context,
-            stream: false
-        })
-    });
-    
-    const data = await response.json();
-    const reply = data.response;
-    
-    // 5. Сохраняем ответ Моники
-    await saveToMemory('monika', reply);
-    
-    return reply;
+
+    // 5. Строим историю для API
+    const histForApi = sharedHistory.slice(-12)
+        .filter(m => m.role === 'user' || m.role === 'm2' || m.role === 'm3')
+        .map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.role === 'm2' ? `[Моника 2.0]: ${m.content}` : m.role === 'm3' ? `[Моника 3.0]: ${m.content}` : m.content
+        }));
+    const apiHistory = [...histForApi.filter((_, i) => i < histForApi.length - 1), { role: 'user', content: text + context }];
+
+    // --- M2 отвечает ---
+    const delay2 = computeDelay(mem2);
+    document.getElementById('tw-m2').classList.add('show');
+    document.getElementById('av-m2').classList.add('thinking');
+    document.getElementById('header-status').textContent = '2.0 обдумывает…';
+    await sleep(delay2);
+
+    let reply2 = '';
+    try {
+        const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'llama3.2:3b',
+                prompt: buildPrompt2(text) + context,
+                stream: false
+            })
+        });
+        const data = await response.json();
+        reply2 = data.response || '…';
+    } catch (e) {
+        console.error('Ollama error:', e);
+        reply2 = '…извини, что-то пошло не так';
+    }
+
+    document.getElementById('tw-m2').classList.remove('show');
+    document.getElementById('av-m2').classList.remove('thinking');
+    addMsg('m2', reply2);
+    sharedHistory.push({ role: 'm2', content: reply2 });
+    await saveToMemory('monika', reply2);
+    nudge(mem2, { interest: .02, closeness: .03, unresolved: -.06 });
+    mem2.sessionCount++;
+    updateMoodBar();
+
+    // Пауза между ответами
+    await sleep(600 + Math.random() * 900);
+
+    // --- M3 отвечает ---
+    const delay3 = computeDelay(mem3);
+    document.getElementById('tw-m3').classList.add('show');
+    document.getElementById('av-m3').classList.add('thinking');
+    document.getElementById('header-status').textContent = '3.0 отвечает…';
+    await sleep(delay3);
+
+    const apiHistory3 = [...apiHistory, { role: 'assistant', content: `[Моника 2.0]: ${reply2}` }];
+
+    let reply3 = '';
+    try {
+        const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'llama3.2:3b',
+                prompt: buildPrompt3(text) + context,
+                stream: false
+            })
+        });
+        const data = await response.json();
+        reply3 = data.response || '…';
+    } catch (e) {
+        console.error('Ollama error:', e);
+        reply3 = '…';
+    }
+
+    document.getElementById('tw-m3').classList.remove('show');
+    document.getElementById('av-m3').classList.remove('thinking');
+    addMsg('m3', reply3);
+    sharedHistory.push({ role: 'm3', content: reply3 });
+    await saveToMemory('monika', reply3);
+    nudge(mem3, { interest: .02, closeness: .02, unresolved: -.05 });
+    mem3.sessionCount++;
+    updateMoodBar();
+    document.getElementById('header-status').textContent = 'обе онлайн';
+
+    // === ДИАЛОГ МЕЖДУ НИМИ ===
+    const dialogueRoll = Math.random();
+    const shouldDoDialogue = dialogueRoll < .40 && reply2.length > 8;
+
+    if (shouldDoDialogue) {
+        await sleep(1200 + Math.random() * 1800);
+        document.getElementById('tw-m3').classList.add('show');
+        document.getElementById('header-status').textContent = '3.0 → 2.0…';
+        await sleep(700 + Math.random() * 800);
+
+        let dialogue3to2 = '';
+        try {
+            const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'llama3.2:3b',
+                    prompt: buildDialoguePrompt_3to2(reply2),
+                    stream: false
+                })
+            });
+            const data = await response.json();
+            dialogue3to2 = data.response || '';
+        } catch (e) {
+            dialogue3to2 = '';
+        }
+
+        document.getElementById('tw-m3').classList.remove('show');
+        if (dialogue3to2) {
+            addMsg('m3', dialogue3to2, true);
+            sharedHistory.push({ role: 'm3', content: dialogue3to2 });
+            await saveToMemory('monika', dialogue3to2);
+
+            if (Math.random() < .25 && dialogue3to2.length > 5) {
+                await sleep(900 + Math.random() * 1200);
+                document.getElementById('tw-m2').classList.add('show');
+                document.getElementById('header-status').textContent = '2.0 → 3.0…';
+                await sleep(800 + Math.random() * 700);
+
+                let dialogue2to3 = '';
+                try {
+                    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: 'llama3.2:3b',
+                            prompt: buildDialoguePrompt_2to3(dialogue3to2),
+                            stream: false
+                        })
+                    });
+                    const data = await response.json();
+                    dialogue2to3 = data.response || '';
+                } catch (e) {
+                    dialogue2to3 = '';
+                }
+
+                document.getElementById('tw-m2').classList.remove('show');
+                if (dialogue2to3) {
+                    addMsg('m2', dialogue2to3, true);
+                    sharedHistory.push({ role: 'm2', content: dialogue2to3 });
+                    await saveToMemory('monika', dialogue2to3);
+                }
+            }
+        }
+        document.getElementById('header-status').textContent = 'обе онлайн';
+    }
+
+    // === СПОНТАННАЯ МЫСЛЬ ===
+    if (!shouldDoDialogue && Math.random() < .15) {
+        const who = Math.random() < .55 ? 'm2' : 'm3';
+        const twId = `tw-${who}`;
+        await sleep(2500 + Math.random() * 3000);
+        document.getElementById(twId).classList.add('show');
+        await sleep(800 + Math.random() * 600);
+
+        const recentContext = sharedHistory.slice(-4).map(m => m.content).join(' | ');
+        let spontaneous = '';
+        try {
+            const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'llama3.2:3b',
+                    prompt: buildSpontaneousPrompt(who, recentContext),
+                    stream: false
+                })
+            });
+            const data = await response.json();
+            spontaneous = data.response || '';
+        } catch (e) {
+            spontaneous = '';
+        }
+
+        document.getElementById(twId).classList.remove('show');
+        if (spontaneous && spontaneous.length > 3) {
+            addMsg(who, spontaneous);
+            sharedHistory.push({ role: who, content: spontaneous });
+            await saveToMemory('monika', spontaneous);
+        }
+    }
+
+    mem2.lastActive = Date.now();
+    mem3.lastActive = Date.now();
+    saveLocal();
+    syncAll();
+
+    isSending = false;
+    document.getElementById('send-btn').disabled = false;
 }
 // ============================================================
 // CONFIG
