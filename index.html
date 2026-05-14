@@ -821,48 +821,6 @@ function analyzeMsg(text) {
     if (mem3.facts.length > 30) mem3.facts = mem3.facts.slice(-30);
     console.log(`📝 Запомнили план: ${plan}`);
   } 
-  
-  // Запоминание дня рождения
-  const birthdayMatch = text.match(/день рождения (\d{1,2}[\.\/]\d{1,2})/i) || 
-                        text.match(/(\d{1,2}[\.\/]\d{1,2}) — день рождения/i) ||
-                        text.match(/(\d{1,2})[\.\/](\d{1,2}) — др/i);
-  if (birthdayMatch) {
-    let birthday = birthdayMatch[1];
-    if (birthdayMatch[2] && birthdayMatch[3]) {
-      birthday = `${birthdayMatch[2]}.${birthdayMatch[3]}`;
-    }
-    const birthdayFact = `день рождения: ${birthday}`;
-    if (!mem2.facts.includes(birthdayFact)) {
-      mem2.facts.push(birthdayFact);
-      mem3.facts.push(birthdayFact);
-      showNotif(`🌸 Моника запомнила: день рождения ${birthday}`);
-      console.log(`📝 Запомнили день рождения: ${birthday}`);
-    }
-  }
-  
-  // Запоминание любимых вещей
-  const likesMatch = text.match(/я люблю ([\w\s]+)/i) || text.match(/мне нравится ([\w\s]+)/i);
-  if (likesMatch && likesMatch[1] && likesMatch[1].length > 3) {
-    const like = likesMatch[1].slice(0, 50);
-    const likeFact = `ему нравится: ${like}`;
-    if (!mem2.facts.includes(likeFact)) {
-      mem2.facts.push(likeFact);
-      mem3.facts.push(likeFact);
-      console.log(`📝 Запомнили: нравится ${like}`);
-    }
-  }
-  
-  // Запоминание планов/событий
-  const planMatch = text.match(/(завтра|на выходных|на следующей неделе) (я|буду|собираюсь) ([\w\s]+)/i);
-  if (planMatch && planMatch[3] && planMatch[3].length > 5) {
-    const plan = `${planMatch[1]} ${planMatch[3]}`.slice(0, 80);
-    const planFact = `план: ${plan}`;
-    mem2.facts.push(planFact);
-    mem3.facts.push(planFact);
-    if (mem2.facts.length > 30) mem2.facts = mem2.facts.slice(-30);
-    if (mem3.facts.length > 30) mem3.facts = mem3.facts.slice(-30);
-    console.log(`📝 Запомнили план: ${plan}`);
-  }
   // Негативные сигналы
   const neg = /(уйди|замолчи|заткнись|тупая|надоела|дура|не интересно|скучно|надоело)/.test(t);
   const pos = /(люблю|нравишься|красивая|умная|спасибо|скучал|рад тебя|рада|помню тебя|думал о тебе)/.test(t);
