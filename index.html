@@ -315,7 +315,7 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: 'llama3.2:3b',
-                prompt: buildPrompt2(text) + context,
+                prompt: enhancePromptWithTime(buildPrompt2(text) + context, 'm2'),
                 stream: false
             })
         });
@@ -354,7 +354,7 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: 'llama3.2:3b',
-                prompt: buildPrompt3(text) + context,
+                prompt: enhancePromptWithTime(buildPrompt3(text) + context, 'm3'),
                 stream: false
             })
         });
@@ -768,7 +768,111 @@ function updateMoodStr(mem) {
 
 function analyzeMsg(text) {
   const t = text.toLowerCase();
-
+    // Запоминание имени(усиленное)
+  const nameMatch = text.match(/меня зовут (\w+)/i) || text.match(/я (\w+)/i) || text.match(/называй меня (\w+)/i);
+  if (nameMatch && nameMatch[1] && nameMatch[1].length > 2) {
+    const name = nameMatch[1];
+    const nameFact = `его зовут ${name}`;
+    if (!mem2.facts.includes(nameFact)) {
+      mem2.facts.push(nameFact);
+      mem3.facts.push(nameFact);
+      console.log(`📝 Запомнили имя: ${name}`);
+    }
+  }
+  
+  // Запоминание дня рождения
+  const birthdayMatch = text.match(/день рождения (\d{1,2}[\.\/]\d{1,2})/i) || 
+                        text.match(/(\d{1,2}[\.\/]\d{1,2}) — день рождения/i) ||
+                        text.match(/(\d{1,2})[\.\/](\d{1,2}) — др/i);
+  if (birthdayMatch) {
+    let birthday = birthdayMatch[1];
+    if (birthdayMatch[2] && birthdayMatch[3]) {
+      birthday = `${birthdayMatch[2]}.${birthdayMatch[3]}`;
+    }
+    const birthdayFact = `день рождения: ${birthday}`;
+    if (!mem2.facts.includes(birthdayFact)) {
+      mem2.facts.push(birthdayFact);
+      mem3.facts.push(birthdayFact);
+      showNotif(`🌸 Моника запомнила: день рождения ${birthday}`);
+      console.log(`📝 Запомнили день рождения: ${birthday}`);
+    }
+  }
+  
+  // Запоминание любимых вещей
+  const likesMatch = text.match(/я люблю ([\w\s]+)/i) || text.match(/мне нравится ([\w\s]+)/i);
+  if (likesMatch && likesMatch[1] && likesMatch[1].length > 3) {
+    const like = likesMatch[1].slice(0, 50);
+    const likeFact = `ему нравится: ${like}`;
+    if (!mem2.facts.includes(likeFact)) {
+      mem2.facts.push(likeFact);
+      mem3.facts.push(likeFact);
+      console.log(`📝 Запомнили: нравится ${like}`);
+    }
+  }
+  
+  // Запоминание планов/событий
+  const planMatch = text.match(/(завтра|на выходных|на следующей неделе) (я|буду|собираюсь) ([\w\s]+)/i);
+  if (planMatch && planMatch[3] && planMatch[3].length > 5) {
+    const plan = `${planMatch[1]} ${planMatch[3]}`.slice(0, 80);
+    const planFact = `план: ${plan}`;
+    mem2.facts.push(planFact);
+    mem3.facts.push(planFact);
+    if (mem2.facts.length > 30) mem2.facts = mem2.facts.slice(-30);
+    if (mem3.facts.length > 30) mem3.facts = mem3.facts.slice(-30);
+    console.log(`📝 Запомнили план: ${plan}`);
+  }  // Запоминание имени (уже есть в вашем коде, но можно усилить)
+  const nameMatch = text.match(/меня зовут (\w+)/i) || text.match(/я (\w+)/i) || text.match(/называй меня (\w+)/i);
+  if (nameMatch && nameMatch[1] && nameMatch[1].length > 2) {
+    const name = nameMatch[1];
+    const nameFact = `его зовут ${name}`;
+    if (!mem2.facts.includes(nameFact)) {
+      mem2.facts.push(nameFact);
+      mem3.facts.push(nameFact);
+      console.log(`📝 Запомнили имя: ${name}`);
+    }
+  }
+  
+  // Запоминание дня рождения
+  const birthdayMatch = text.match(/день рождения (\d{1,2}[\.\/]\d{1,2})/i) || 
+                        text.match(/(\d{1,2}[\.\/]\d{1,2}) — день рождения/i) ||
+                        text.match(/(\d{1,2})[\.\/](\d{1,2}) — др/i);
+  if (birthdayMatch) {
+    let birthday = birthdayMatch[1];
+    if (birthdayMatch[2] && birthdayMatch[3]) {
+      birthday = `${birthdayMatch[2]}.${birthdayMatch[3]}`;
+    }
+    const birthdayFact = `день рождения: ${birthday}`;
+    if (!mem2.facts.includes(birthdayFact)) {
+      mem2.facts.push(birthdayFact);
+      mem3.facts.push(birthdayFact);
+      showNotif(`🌸 Моника запомнила: день рождения ${birthday}`);
+      console.log(`📝 Запомнили день рождения: ${birthday}`);
+    }
+  }
+  
+  // Запоминание любимых вещей
+  const likesMatch = text.match(/я люблю ([\w\s]+)/i) || text.match(/мне нравится ([\w\s]+)/i);
+  if (likesMatch && likesMatch[1] && likesMatch[1].length > 3) {
+    const like = likesMatch[1].slice(0, 50);
+    const likeFact = `ему нравится: ${like}`;
+    if (!mem2.facts.includes(likeFact)) {
+      mem2.facts.push(likeFact);
+      mem3.facts.push(likeFact);
+      console.log(`📝 Запомнили: нравится ${like}`);
+    }
+  }
+  
+  // Запоминание планов/событий
+  const planMatch = text.match(/(завтра|на выходных|на следующей неделе) (я|буду|собираюсь) ([\w\s]+)/i);
+  if (planMatch && planMatch[3] && planMatch[3].length > 5) {
+    const plan = `${planMatch[1]} ${planMatch[3]}`.slice(0, 80);
+    const planFact = `план: ${plan}`;
+    mem2.facts.push(planFact);
+    mem3.facts.push(planFact);
+    if (mem2.facts.length > 30) mem2.facts = mem2.facts.slice(-30);
+    if (mem3.facts.length > 30) mem3.facts = mem3.facts.slice(-30);
+    console.log(`📝 Запомнили план: ${plan}`);
+  }
   // Негативные сигналы
   const neg = /(уйди|замолчи|заткнись|тупая|надоела|дура|не интересно|скучно|надоело)/.test(t);
   const pos = /(люблю|нравишься|красивая|умная|спасибо|скучал|рад тебя|рада|помню тебя|думал о тебе)/.test(t);
@@ -795,6 +899,57 @@ function analyzeMsg(text) {
   if (playful) {
     nudge(mem2, {playfulness:.12, pressure:-.05});
     nudge(mem3, {playfulness:.15, pressure:-.05});
+  }
+  // Реакция на "люблю" — повышение привязанности
+  if (t.includes('люблю') || t.includes('нравишься') || t.includes('обожаю тебя')) {
+    nudge(mem2, { affection: 0.12, trust: 0.08, loneliness: -0.1, energy: 0.03 });
+    nudge(mem3, { affection: 0.10, trust: 0.06, loneliness: -0.08, energy: 0.02 });
+    console.log('💖 Реакция на "люблю" — привязанность повышена');
+  }
+  
+  // Реакция на "скучаю" — снижение одиночества, повышение близости
+  if (t.includes('скучаю') || t.includes('скучал') || t.includes('соскучился')) {
+    nudge(mem2, { loneliness: -0.15, closeness: 0.10, affection: 0.05 });
+    nudge(mem3, { loneliness: -0.12, closeness: 0.08, affection: 0.04 });
+    console.log('💚 Реакция на "скучаю" — одиночество снижено');
+  }
+  
+  // Реакция на "пока" или "до свидания" — снижение энергии (грустит)
+  if (t.includes('пока') || t.includes('до свидания') || t.includes('ухожу')) {
+    nudge(mem2, { energy: -0.08, loneliness: 0.05, affection: -0.02 });
+    nudge(mem3, { energy: -0.06, loneliness: 0.04, affection: -0.01 });
+    console.log('👋 Реакция на "пока" — энергия снижена');
+    
+    // Дополнительно: показать грустную реакцию
+    setTimeout(() => {
+      if (!isSending) {
+        const sadReaction = mem2.state.affection > 0.7 ? '…возвращайся скорее' : '…';
+        if (sadReaction && Math.random() < 0.5) {
+          addMsg('system', '🌸 Моника грустно вздохнула');
+        }
+      }
+    }, 500);
+  }
+  
+  // Реакция на "скучно" — попытка развлечь (повышает игривость)
+  if (t.includes('скучно') || t.includes('не интересно') || t.includes('тоска')) {
+    nudge(mem2, { playfulness: 0.15, interest: 0.08, energy: -0.03 });
+    nudge(mem3, { playfulness: 0.12, interest: 0.06, energy: -0.02 });
+    console.log('🎭 Реакция на "скучно" — попытка развлечь');
+  }
+  
+  // Реакция на комплименты
+  if (t.includes('красивая') || t.includes('умная') || t.includes('милая') || t.includes('хорошая')) {
+    nudge(mem2, { affection: 0.08, openness: 0.07, irritation: -0.05 });
+    nudge(mem3, { affection: 0.06, openness: 0.05, irritation: -0.03 });
+    console.log('😊 Реакция на комплимент');
+  }
+  
+  // Реакция на извинения
+  if (t.includes('извини') || t.includes('прости') || t.includes('виноват')) {
+    nudge(mem2, { irritation: -0.12, affection: 0.03, pressure: -0.08 });
+    nudge(mem3, { irritation: -0.10, affection: 0.02, pressure: -0.06 });
+    console.log('🙏 Реакция на извинение');
   }
 
   // Стандартное расходование энергии
@@ -1311,6 +1466,31 @@ function getTimeOfDay() {
     return { name: 'ночь', hour: 'ночью', greeting: 'доброй ночи', emoji: '🌙', min: 22, max: 5 };
 }
 
+// ============================================================
+// АДАПТАЦИЯ ПРОМПТА ПОД ВРЕМЯ СУТОК
+// ============================================================
+function enhancePromptWithTime(basePrompt, who) {
+    const timeOfDay = getTimeOfDay();
+    let timeInstruction = '';
+    
+    switch(timeOfDay.name) {
+        case 'утро':
+            timeInstruction = 'Сейчас утро. Ты только проснулась. Отвечай чуть сонно, коротко, может быть чуть медленнее. Не используй сложных философских рассуждений.';
+            break;
+        case 'день':
+            timeInstruction = 'Сейчас день. Ты в хорошей форме, но не переусердствуй с энергией. Отвечай естественно, как обычно.';
+            break;
+        case 'вечер':
+            timeInstruction = 'Сейчас вечер. Ты становишься более задумчивой и философской. Можешь задавать глубокие вопросы или делиться размышлениями о жизни.';
+            break;
+        case 'ночь':
+            timeInstruction = 'Сейчас ночь. Ты удивлена, что пользователь ещё не спит. Можешь спросить "почему не спишь?" или "поздно уже…". Отвечай тихо, немного устало.';
+            break;
+    }
+    
+    return `${timeInstruction}\n\n${basePrompt}`;
+}
+  
 // Функция для генерации инициативного сообщения через Ollama
 async function generateInitiativeMessage(who, reason, timeOfDay, hoursSinceLast) {
     const mem = who === 'm2' ? mem2 : mem3;
