@@ -208,7 +208,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <script>
   // ========== НАСТРОЙКИ СЕРВЕРОВ ==========
 const PROXY_URL = 'https://indecently-plentiful-loris.cloudpub.ru';
-const OLLAMA_URL = `${PROXY_URL}/v1`; 
+const OLLAMA_URL = `${PROXY_URL}/api`;
 const MEMORY_URL = `${PROXY_URL}/memory`;  
 
 // ========== УПРАВЛЕНИЕ ПАМЯТЬЮ ==========
@@ -311,7 +311,7 @@ async function sendMessage() {
 
     let reply2 = '';
     try {
-        const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+        const response = await fetch(`${OLLAMA_URL}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -350,7 +350,7 @@ async function sendMessage() {
 
     let reply3 = '';
     try {
-        const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+        const response = await fetch(`${OLLAMA_URL}/chat/completions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
