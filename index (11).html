@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Главная - Колледж Синергия</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <img src="images/logo.png" alt="Синергия" class="logo">
+        <h1>Колледж Синергия</h1>
+        <p class="subtitle">Якутск</p>
+      </div>
+      <nav>
+        <a href="index.html" class="active">Главная</a>
+        <a href="schedule.html">Расписание</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <section class="hero">
+      <h2>Предстоящие мероприятия</h2>
+      <p>Следите за актуальными событиями колледжа</p>
+    </section>
+
+    <div id="events-container" class="events-grid">
+      <div class="loading">Загрузка мероприятий...</div>
+    </div>
+
+    <div id="event-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2024 Колледж Синергия, Якутск. Все права защищены.</p>
+      <p>Контакты: info@synergy-yakutsk.ru | +7 (4112) XX-XX-XX</p>
+    </div>
+  </footer>
+
+  <!-- ========== МОНИКА — ПЛАВАЮЩАЯ КНОПКА ========== -->
+  <style>
+  #monica-fab {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  #monica-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c084fc, #67e8f9);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(192,84,252,.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    transition: transform .2s, box-shadow .2s;
+    position: relative;
+  }
+  #monica-btn:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(192,84,252,.6); }
+  #monica-btn:active { transform: scale(.95); }
+  #monica-pulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(192,84,252,.4);
+    animation: mpulse 2s ease infinite;
+  }
+  @keyframes mpulse { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.15);opacity:0} }
+  #monica-tooltip {
+    background: #1a1525;
+    color: #e8e0f0;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(192,84,252,.3);
+    white-space: nowrap;
+    font-family: 'Segoe UI', sans-serif;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    animation: mfadeIn .3s ease;
+    cursor: pointer;
+  }
+  @keyframes mfadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  #monica-iframe-wrap {
+    position: fixed;
+    bottom: 100px;
+    right: 28px;
+    width: 390px;
+    height: 600px;
+    z-index: 9998;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 16px 60px rgba(0,0,0,.35);
+    display: none;
+    animation: mslideUp .35s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes mslideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+  #monica-iframe-wrap iframe { width:100%; height:100%; border:none; display:block; }
+  #monica-close-wrap {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 10;
+    background: rgba(13,10,15,.8);
+    border: 1px solid rgba(255,255,255,.1);
+    color: #9d8fb0;
+    font-size: 18px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color .2s;
+  }
+  #monica-close-wrap:hover { color: #fff; }
+  @media (max-width: 480px) {
+    #monica-iframe-wrap { width: calc(100vw - 16px); height: 70dvh; right: 8px; bottom: 90px; }
+  }
+  </style>
+
+  <div id="monica-fab">
+    <div id="monica-tooltip" onclick="toggleMonica()" style="display:none">
+      🌸 Привет! Чем могу помочь?
+    </div>
+    <button id="monica-btn" onclick="toggleMonica()" title="Помощник Моника">
+      <div id="monica-pulse"></div>
+      🌸
+    </button>
+  </div>
+
+  <div id="monica-iframe-wrap">
+    <div id="monica-close-wrap" onclick="closeMonica()">×</div>
+    <!-- monica.html лежит рядом в том же репозитории GitHub Pages -->
+    <iframe id="monica-iframe" src="" title="Моника — помощник колледжа" loading="lazy"></iframe>
+  </div>
+
+  <script>
+  (function() {
+    var monicaOpen = false;
+
+    setTimeout(function() {
+      if (!monicaOpen) {
+        var t = document.getElementById('monica-tooltip');
+        t.style.display = 'block';
+        setTimeout(function() {
+          if (!monicaOpen) t.style.display = 'none';
+        }, 6000);
+      }
+    }, 3000);
+
+    window.toggleMonica = function() {
+      monicaOpen ? closeMonica() : openMonica();
+    };
+
+    window.openMonica = function() {
+      monicaOpen = true;
+      document.getElementById('monica-tooltip').style.display = 'none';
+      var iframe = document.getElementById('monica-iframe');
+      // ← monica.html лежит рядом с index.html в репозитории
+      if (!iframe.getAttribute('data-loaded')) {
+        iframe.src = 'monica.html';
+        iframe.setAttribute('data-loaded', '1');
+      }
+      document.getElementById('monica-iframe-wrap').style.display = 'block';
+      document.getElementById('monica-btn').innerHTML = '<span style="font-size:20px">×</span>';
+      document.getElementById('monica-pulse') && (document.getElementById('monica-pulse').style.display = 'none');
+    };
+
+    window.closeMonica = function() {
+      monicaOpen = false;
+      document.getElementById('monica-iframe-wrap').style.display = 'none';
+      document.getElementById('monica-btn').innerHTML = '<div id="monica-pulse"></div>🌸';
+    };
+  })();
+  </script>
+  <!-- ========== /МОНИКА ========== -->
+
+  <script>
+  // ════════════════════════════════════════════════════════
+  // НАСТРОЙКИ API — ОБНОВИ ЭТУ СТРОКУ при смене cloudpub!
+  // ════════════════════════════════════════════════════════
+  const API_BASE = 'https://indecently-plentiful-loris.cloudpub.ru'; // ← МЕНЯЙ ЗДЕСЬ
+
+  async function loadEvents() {
+    const container = document.getElementById('events-container');
+    try {
+      const response = await fetch(`${API_BASE}/api/events`);
+      const events = await response.json();
+      if (events.length === 0) {
+        container.innerHTML = '<p class="info-message">Пока нет запланированных мероприятий</p>';
+        return;
+      }
+      events.sort((a, b) => new Date(a.date) - new Date(b.date));
+      container.innerHTML = events.map(event => {
+        const formattedDate = new Date(event.date).toLocaleDateString('ru-RU', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        });
+        const imageUrl = event.photos && event.photos.length > 0 ? event.photos[0] : '';
+        return `
+          <div class="event-card" onclick="showEventDetails(${event.id})">
+            ${imageUrl
+              ? `<img src="${API_BASE}${imageUrl}" alt="${event.title}" class="event-image">`
+              : '<div class="event-image" style="background:linear-gradient(135deg,#E31E24,#B71C1C)"></div>'}
+            <div class="event-content">
+              <h3 class="event-title">${event.title}</h3>
+              <div class="event-meta">
+                <span>📅 ${formattedDate}</span>
+                <span>🕐 ${event.time}</span>
+              </div>
+              <p class="event-description">${event.description}</p>
+              ${event.location ? `<p style="margin-top:10px;color:#666">📍 ${event.location}</p>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    } catch (error) {
+      container.innerHTML = '<p class="info-message">Ошибка загрузки мероприятий.<br>Сервер недоступен.</p>';
+    }
+  }
+
+  function showEventDetails(eventId) {
+    fetch(`${API_BASE}/api/events`)
+      .then(r => r.json())
+      .then(events => {
+        const event = events.find(e => e.id === eventId);
+        if (!event) return;
+        const formattedDate = new Date(event.date).toLocaleDateString('ru-RU', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        });
+        document.getElementById('modal-body').innerHTML = `
+          <h2 style="color:#E31E24;margin-bottom:20px">${event.title}</h2>
+          <div style="color:#666;margin-bottom:20px">
+            <p><strong>📅 Дата:</strong> ${formattedDate}</p>
+            <p><strong>🕐 Время:</strong> ${event.time}</p>
+            ${event.location ? `<p><strong>📍 Место:</strong> ${event.location}</p>` : ''}
+          </div>
+          <p style="line-height:1.8;margin-bottom:20px">${event.description}</p>
+          ${event.photos && event.photos.length > 0 ? `
+            <h3 style="margin-bottom:15px">Фотографии:</h3>
+            <div class="event-gallery">
+              ${event.photos.map(p => `<img src="${API_BASE}${p}" alt="Фото" class="gallery-image" onclick="window.open('${API_BASE}${p}','_blank')">`).join('')}
+            </div>` : ''}`;
+        document.getElementById('event-modal').style.display = 'block';
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('event-modal');
+    modal.querySelector('.close').onclick = () => modal.style.display = 'none';
+    window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    loadEvents();
+  });
+  </script>
+
+</body>
+</html>
