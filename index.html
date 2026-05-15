@@ -1219,7 +1219,7 @@ function buildSpontaneousPrompt(who, context) {
 //   OLLAMA_ORIGINS="*" ollama serve
 // Или в Windows: setx OLLAMA_ORIGINS "*" — потом перезапусти ollama
 // ============================================================
-const OLLAMA_MODEL = 'gemma3:1b';
+const OLLAMA_MODEL = 'llama3.2:latest';
 
 async function callClaude(systemPrompt, messages) {
   // Склеиваем system + историю в один массив для Ollama
