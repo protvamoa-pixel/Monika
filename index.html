@@ -281,20 +281,24 @@ function saveLocal() {
 }
 
 function loadLocal() {
+  // НЕ ЗАГРУЖАЕМ ИСТОРИЮ - всегда чистый чат
+  // conversationHistory = [];
+  // memory = [];
+  
+  // Загружаем только состояние Моники (энергия, настроение и т.д.)
   try {
     const savedState = localStorage.getItem('monica_state');
     if (savedState) monicaState = JSON.parse(savedState);
     
-    const savedHistory = localStorage.getItem('monica_history');
-    if (savedHistory) {
-      conversationHistory = JSON.parse(savedHistory);
-      conversationHistory.forEach(msg => {
-        addMessage(msg.role, msg.content, false);
-      });
-    }
-    
-    const savedMemory = localStorage.getItem('monica_memory');
-    if (savedMemory) memory = JSON.parse(savedMemory);
+    // Очищаем историю при загрузке
+    conversationHistory = [];
+    memory = [];
+    messagesEl.innerHTML = `
+      <div id="empty">
+        <div class="big">💜</div>
+        <p>Привет! Напиши что нибудь...</p>
+      </div>
+    `;
   } catch(e) {
     console.error('Ошибка загрузки:', e);
   }
