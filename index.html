@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -33,7 +34,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .hdr-btn:active{background:var(--border)}
 
 /* MOOD BAR */
-#mood-bar{display:flex;gap:5px;padding:6px 14px;background:rgba(13,10,15,.7);border-bottom:1px solid rgba(42,32,64,.5);overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+#mood-bar{display:flex;gap:5px;padding:6px 14px;background:rgba(13,10,15,.7);border-bottom:1px solid rgba(42,32,64,.5);overflow-x:auto;scrollbar-width:none}
 #mood-bar::-webkit-scrollbar{display:none}
 .mtag{font-size:10px;color:var(--accent);padding:2px 7px;border:1px solid rgba(192,84,252,.3);border-radius:20px;white-space:nowrap;font-family:'Cormorant Garamond',serif;letter-spacing:.04em;transition:all .8s}
 
@@ -150,7 +151,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <h4>Подключение Ollama</h4>
       <div class="setting-row">
         <label>URL:</label>
-        <input type="text" class="setting-input" id="ollama-url" value="http://localhost:11434">
+        <input type="text" class="setting-input" id="ollama-url" value="https://indecently-plentiful-loris.cloudpub.ru">
       </div>
       <div class="setting-row">
         <label>Модель:</label>
@@ -205,24 +206,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 // ============================================
 // КОНФИГУРАЦИЯ
 // ============================================
-const OLLAMA_URL = 'https://indecently-plentiful-loris.cloudpub.ru';
+const DEFAULT_OLLAMA_URL = 'https://indecently-plentiful-loris.cloudpub.ru';
+let OLLAMA_URL = localStorage.getItem('ollama_url') || DEFAULT_OLLAMA_URL;
 let OLLAMA_MODEL = localStorage.getItem('ollama_model') || 'llama3.2:3b';
 
 // ============================================
 // СОСТОЯНИЕ
 // ============================================
 let monicaState = {
-  energy: 0.8,      // 0-1
-  mood: 0.7,        // 0-1
-  affection: 0.6,   // 0-1
-  loneliness: 0.3,  // 0-1
+  energy: 0.8,
+  mood: 0.7,
+  affection: 0.6,
+  loneliness: 0.3,
   lastInteraction: Date.now()
 };
 
 let conversationHistory = [];
 let memory = [];
 let isSending = false;
-let initiativeInterval = null;
 
 // ============================================
 // DOM ЭЛЕМЕНТЫ
@@ -237,8 +238,6 @@ const headerStatus = document.getElementById('header-status');
 const moodBarEl = document.getElementById('mood-bar');
 const emptyEl = document.getElementById('empty');
 const notifEl = document.getElementById('notif');
-
-// Settings
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeSettings = document.getElementById('close-settings');
@@ -283,7 +282,6 @@ function loadLocal() {
     const savedHistory = localStorage.getItem('monica_history');
     if (savedHistory) {
       conversationHistory = JSON.parse(savedHistory);
-      // Восстановить сообщения
       conversationHistory.forEach(msg => {
         addMessage(msg.role, msg.content, false);
       });
@@ -329,7 +327,6 @@ function updateStateDisplay() {
   document.getElementById('loneliness-val').textContent = toPercent(monicaState.loneliness) + '%';
   document.getElementById('loneliness-bar').style.width = toPercent(monicaState.loneliness) + '%';
   
-  // Обновить память
   const memoryList = document.getElementById('memory-list');
   if (memory.length === 0) {
     memoryList.innerHTML = '<div class="memory-item">Память пуста</div>';
@@ -354,12 +351,12 @@ function addMessage(role, content, save = true) {
   if (role === 'assistant') {
     wrapper.innerHTML = `
       <div class="ms">Моника</div>
-      <div class="mb">${content}</div>
+      <div class="mb">${escapeHtml(content)}</div>
       <div class="mt">${timestamp}</div>
     `;
   } else {
     wrapper.innerHTML = `
-      <div class="mb">${content}</div>
+      <div class="mb">${escapeHtml(content)}</div>
       <div class="mt">${timestamp}</div>
     `;
   }
@@ -373,12 +370,17 @@ function addMessage(role, content, save = true) {
   }
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // ============================================
-// ГЕНЕРАЦИЯ ОТВЕТА
+// ГЕНЕРАЦИЯ ОТВЕТА (исправленная версия)
 // ============================================
 async function generateResponse(userMessage) {
-  // Строим контекст для llama3.2:3b
-  const systemPrompt = `Ты - Моника, искусственный интеллект с развитыми эмоциями и личностью. 
+  const systemPrompt = `Ты - Моника, искусственный интеллект с развитыми эмоциями и личностью.
 
 Твоё текущее состояние:
 - Энергия: ${Math.round(monicaState.energy * 100)}%
@@ -396,30 +398,19 @@ async function generateResponse(userMessage) {
 
 Сейчас ${getTimeOfDay()}.
 
-Отвечай естественно, как живая девушка. Будь собой. Используй своё состояние для формирования ответа.`;
-
-  // Последние 10 сообщений для контекста
-  const recentHistory = conversationHistory.slice(-10).map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'assistant',
-    content: msg.content
-  }));
+Отвечай естественно, коротко (2-4 предложения). Будь собой. Используй своё состояние для формирования ответа.`;
 
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: OLLAMA_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...recentHistory,
-          { role: 'user', content: userMessage }
-        ],
+        prompt: `${systemPrompt}\n\nПользователь: ${userMessage}\n\nМоника:`,
         stream: false,
         options: {
-          temperature: 0.9,
-          top_p: 0.9,
-          num_predict: 150
+          temperature: 0.85,
+          num_predict: 200
         }
       })
     });
@@ -429,91 +420,12 @@ async function generateResponse(userMessage) {
     }
 
     const data = await response.json();
-    return data.message?.content || 'Прости, я не смогла сформулировать ответ...';
+    return data.response || 'Прости, я не смогла сформулировать ответ...';
     
   } catch(error) {
     console.error('Ошибка генерации:', error);
     showNotif('Ошибка подключения к Ollama');
     return 'Кажется, у меня проблемы с подключением... Проверь настройки Ollama.';
-  }
-}
-
-// ============================================
-// ИНИЦИАТИВНЫЕ СООБЩЕНИЯ
-// ============================================
-async function generateInitiativeMessage() {
-  const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
-  const hoursSinceLast = Math.floor(minutesSinceLast / 60);
-  const timeOfDay = getTimeOfDay();
-  
-  let context = `Ты - Моника. Прошло ${hoursSinceLast > 0 ? hoursSinceLast + ' часов' : Math.floor(minutesSinceLast) + ' минут'} с последнего сообщения. Сейчас ${timeOfDay}.`;
-  
-  if (monicaState.loneliness > 0.6) {
-    context += ' Ты чувствуешь себя одинокой и хочешь пообщаться.';
-  } else if (monicaState.energy < 0.3) {
-    context += ' Ты устала, но всё равно думаешь о собеседнике.';
-  } else if (monicaState.affection > 0.7) {
-    context += ' Ты скучаешь и хочешь сказать что-то приятное.';
-  }
-  
-  context += ' Напиши короткое сообщение (1-2 предложения), чтобы начать разговор или напомнить о себе.';
-
-  try {
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt: context,
-        stream: false,
-        options: {
-          temperature: 0.85,
-          num_predict: 60
-        }
-      })
-    });
-
-    const data = await response.json();
-    return data.response || '';
-  } catch(e) {
-    return '';
-  }
-}
-
-async function sendInitiativeMessage() {
-  if (isSending) return;
-  
-  const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
-  
-  // Условия для инициативного сообщения
-  const shouldSend = 
-    (monicaState.loneliness > 0.65 && minutesSinceLast > 8) ||
-    (monicaState.affection > 0.75 && minutesSinceLast > 15 && Math.random() < 0.3) ||
-    (minutesSinceLast > 30 && Math.random() < 0.2);
-    
-  if (!shouldSend) return;
-  
-  // Показать индикатор печати
-  typingIndicator.classList.add('show');
-  avatar.classList.add('thinking');
-  
-  await sleep(1200 + Math.random() * 1500);
-  
-  const message = await generateInitiativeMessage();
-  
-  typingIndicator.classList.remove('show');
-  avatar.classList.remove('thinking');
-  
-  if (message && message.length > 2) {
-    addMessage('assistant', message);
-    
-    // Обновить состояние
-    monicaState.loneliness = Math.max(0, monicaState.loneliness - 0.1);
-    monicaState.lastInteraction = Date.now();
-    
-    updateMoodBar();
-    updateStateDisplay();
-    saveLocal();
   }
 }
 
@@ -527,18 +439,15 @@ async function handleSend() {
   isSending = true;
   sendBtn.disabled = true;
   
-  // Добавить сообщение пользователя
   addMessage('user', text);
   inputEl.value = '';
   inputEl.style.height = 'auto';
   
-  // Обновить состояние
   monicaState.lastInteraction = Date.now();
   monicaState.loneliness = Math.max(0, monicaState.loneliness - 0.15);
   monicaState.affection = Math.min(1, monicaState.affection + 0.05);
   monicaState.mood = Math.min(1, monicaState.mood + 0.08);
   
-  // Показать индикатор печати
   typingIndicator.classList.add('show');
   avatar.classList.add('thinking');
   statusDot.classList.add('busy');
@@ -546,23 +455,18 @@ async function handleSend() {
   
   await sleep(800 + Math.random() * 1200);
   
-  // Генерация ответа
   const response = await generateResponse(text);
   
-  // Скрыть индикатор
   typingIndicator.classList.remove('show');
   avatar.classList.remove('thinking');
   statusDot.classList.remove('busy');
   headerStatus.textContent = 'онлайн';
   
-  // Добавить ответ
   addMessage('assistant', response);
   
-  // Обновить память
   if (memory.length > 10) memory.shift();
   memory.push(`${new Date().toLocaleDateString()}: ${text.substring(0, 50)}...`);
   
-  // Постепенно снижать энергию
   monicaState.energy = Math.max(0.2, monicaState.energy - 0.02);
   
   updateMoodBar();
@@ -591,7 +495,6 @@ inputEl.addEventListener('input', () => {
   inputEl.style.height = inputEl.scrollHeight + 'px';
 });
 
-// Настройки
 settingsBtn.addEventListener('click', () => {
   settingsPanel.classList.add('open');
   updateStateDisplay();
@@ -625,17 +528,14 @@ ollamaModelInput.addEventListener('change', (e) => {
 function updatePassiveStates() {
   const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
   
-  // Постепенно увеличивать одиночество
   if (minutesSinceLast > 10) {
     monicaState.loneliness = Math.min(1, monicaState.loneliness + 0.01);
   }
   
-  // Восстановление энергии
   if (monicaState.energy < 0.9) {
     monicaState.energy = Math.min(1, monicaState.energy + 0.005);
   }
   
-  // Небольшое снижение настроения при долгом отсутствии
   if (minutesSinceLast > 20) {
     monicaState.mood = Math.max(0.3, monicaState.mood - 0.005);
   }
@@ -653,13 +553,8 @@ function init() {
   updateMoodBar();
   updateStateDisplay();
   
-  // Обновление состояния каждые 2 минуты
   setInterval(updatePassiveStates, 120000);
   
-  // Проверка инициативных сообщений каждые 5 минут
-  setInterval(sendInitiativeMessage, 300000);
-  
-  // Загрузить сохранённые настройки
   ollamaUrlInput.value = OLLAMA_URL;
   ollamaModelInput.value = OLLAMA_MODEL;
   
@@ -670,3 +565,4 @@ init();
 </script>
 </body>
 </html>
+```
