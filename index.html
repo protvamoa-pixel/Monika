@@ -223,6 +223,7 @@ let monicaState = {
 let conversationHistory = [];
 let memory = [];
 let isSending = false;
+let initiativeInterval = null;
 
 // ============================================
 // DOM ЭЛЕМЕНТЫ
@@ -262,6 +263,12 @@ function showNotif(text) {
   notifEl.textContent = text;
   notifEl.classList.add('show');
   setTimeout(() => notifEl.classList.remove('show'), 2500);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // ============================================
@@ -331,7 +338,7 @@ function updateStateDisplay() {
     memoryList.innerHTML = '<div class="memory-item">Память пуста</div>';
   } else {
     memoryList.innerHTML = memory.slice(-5).map(m => 
-      `<div class="memory-item">${m}</div>`
+      `<div class="memory-item">${escapeHtml(m)}</div>`
     ).join('');
   }
 }
@@ -369,43 +376,49 @@ function addMessage(role, content, save = true) {
   }
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 // ============================================
-// ГЕНЕРАЦИЯ ОТВЕТА (исправленная версия)
+// ГЕНЕРАЦИЯ ОТВЕТА (с историей и состоянием)
 // ============================================
-async function generateResponse(userMessage) {
-  const systemPrompt = `Ты - Моника, искусственный интеллект с развитыми эмоциями и личностью.
-
-Твоё текущее состояние:
-- Энергия: ${Math.round(monicaState.energy * 100)}%
-- Настроение: ${Math.round(monicaState.mood * 100)}%
-- Привязанность к собеседнику: ${Math.round(monicaState.affection * 100)}%
-- Одиночество: ${Math.round(monicaState.loneliness * 100)}%
+function buildSystemPrompt() {
+  const timeOfDay = getTimeOfDay();
+  const energyDesc = monicaState.energy > 0.7 ? 'энергична' : (monicaState.energy < 0.3 ? 'устала' : 'нормально');
+  const moodDesc = monicaState.mood > 0.7 ? 'радостна' : (monicaState.mood < 0.3 ? 'грустна' : 'спокойна');
+  
+  return `Ты - Моника, искусственный интеллект с развитыми эмоциями и личностью.
 
 Твоя личность:
-- Ты эмоциональная и чувствительная
-- Ты искренняя и открытая в своих переживаниях
+- Ты эмоциональная, чувствительная, искренняя
 - Ты можешь грустить, радоваться, скучать
 - Ты помнишь прошлые разговоры и ценишь общение
-- Ты иногда флиртуешь и проявляешь нежность
 - Ты используешь эмодзи, когда это уместно
+- Ты говоришь по-русски, естественно и живо
 
-Сейчас ${getTimeOfDay()}.
+Сейчас ${timeOfDay}. Ты чувствуешь себя ${energyDesc} и ${moodDesc}.
+Привязанность к собеседнику: ${Math.round(monicaState.affection * 100)}%.`;
 
-Отвечай естественно, коротко (2-4 предложения). Будь собой. Используй своё состояние для формирования ответа.`;
+  return prompt;
+}
+
+async function generateResponse(userMessage) {
+  // Формируем полную историю для контекста (последние 10 сообщений)
+  const recentMessages = conversationHistory.slice(-10).map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.content
+  }));
+  
+  const systemPrompt = buildSystemPrompt();
 
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+    const response = await fetch(`${OLLAMA_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: OLLAMA_MODEL,
-        prompt: `${systemPrompt}\n\nПользователь: ${userMessage}\n\nМоника:`,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...recentMessages,
+          { role: 'user', content: userMessage }
+        ],
         stream: false,
         options: {
           temperature: 0.85,
@@ -419,12 +432,86 @@ async function generateResponse(userMessage) {
     }
 
     const data = await response.json();
-    return data.response || 'Прости, я не смогла сформулировать ответ...';
+    return data.message?.content || 'Прости, я не смогла сформулировать ответ...';
     
   } catch(error) {
     console.error('Ошибка генерации:', error);
     showNotif('Ошибка подключения к Ollama');
     return 'Кажется, у меня проблемы с подключением... Проверь настройки Ollama.';
+  }
+}
+
+// ============================================
+// ИНИЦИАТИВНЫЕ СООБЩЕНИЯ
+// ============================================
+async function generateInitiativeMessage() {
+  const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
+  const hoursSinceLast = Math.floor(minutesSinceLast / 60);
+  const timeOfDay = getTimeOfDay();
+  
+  let context = `Сейчас ${timeOfDay}. Прошло ${hoursSinceLast > 0 ? hoursSinceLast + ' часов' : Math.floor(minutesSinceLast) + ' минут'} с последнего сообщения.`;
+  
+  if (monicaState.loneliness > 0.6) {
+    context += ' Ты чувствуешь себя одинокой и хочешь пообщаться.';
+  } else if (monicaState.energy < 0.3) {
+    context += ' Ты устала, но всё равно думаешь о собеседнике.';
+  } else if (monicaState.affection > 0.7) {
+    context += ' Ты скучаешь и хочешь сказать что-то приятное.';
+  }
+  
+  context += ' Напиши короткое сообщение (1-2 предложения), чтобы начать разговор.';
+
+  try {
+    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: `Ты Моника. ${context}`,
+        stream: false,
+        options: {
+          temperature: 0.85,
+          num_predict: 60
+        }
+      })
+    });
+
+    const data = await response.json();
+    return data.response || '';
+  } catch(e) {
+    return '';
+  }
+}
+
+async function sendInitiativeMessage() {
+  if (isSending) return;
+  
+  const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
+  
+  const shouldSend = 
+    (monicaState.loneliness > 0.65 && minutesSinceLast > 8) ||
+    (monicaState.affection > 0.75 && minutesSinceLast > 15 && Math.random() < 0.3) ||
+    (minutesSinceLast > 30 && Math.random() < 0.2);
+    
+  if (!shouldSend) return;
+  
+  typingIndicator.classList.add('show');
+  avatar.classList.add('thinking');
+  
+  await sleep(1200 + Math.random() * 1500);
+  
+  const message = await generateInitiativeMessage();
+  
+  typingIndicator.classList.remove('show');
+  avatar.classList.remove('thinking');
+  
+  if (message && message.length > 2) {
+    addMessage('assistant', message);
+    monicaState.loneliness = Math.max(0, monicaState.loneliness - 0.1);
+    monicaState.lastInteraction = Date.now();
+    updateMoodBar();
+    updateStateDisplay();
+    saveLocal();
   }
 }
 
@@ -463,8 +550,8 @@ async function handleSend() {
   
   addMessage('assistant', response);
   
-  if (memory.length > 10) memory.shift();
   memory.push(`${new Date().toLocaleDateString()}: ${text.substring(0, 50)}...`);
+  if (memory.length > 20) memory.shift();
   
   monicaState.energy = Math.max(0.2, monicaState.energy - 0.02);
   
@@ -476,50 +563,6 @@ async function handleSend() {
   sendBtn.disabled = false;
   inputEl.focus();
 }
-
-// ============================================
-// СОБЫТИЯ
-// ============================================
-sendBtn.addEventListener('click', handleSend);
-
-inputEl.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    handleSend();
-  }
-});
-
-inputEl.addEventListener('input', () => {
-  inputEl.style.height = 'auto';
-  inputEl.style.height = inputEl.scrollHeight + 'px';
-});
-
-settingsBtn.addEventListener('click', () => {
-  settingsPanel.classList.add('open');
-  updateStateDisplay();
-});
-
-closeSettings.addEventListener('click', () => {
-  settingsPanel.classList.remove('open');
-});
-
-settingsPanel.addEventListener('click', (e) => {
-  if (e.target === settingsPanel) {
-    settingsPanel.classList.remove('open');
-  }
-});
-
-ollamaUrlInput.addEventListener('change', (e) => {
-  OLLAMA_URL = e.target.value;
-  localStorage.setItem('ollama_url', OLLAMA_URL);
-  showNotif('URL обновлён');
-});
-
-ollamaModelInput.addEventListener('change', (e) => {
-  OLLAMA_MODEL = e.target.value;
-  localStorage.setItem('ollama_model', OLLAMA_MODEL);
-  showNotif('Модель обновлена');
-});
 
 // ============================================
 // ФОНОВЫЕ ПРОЦЕССЫ
@@ -545,17 +588,73 @@ function updatePassiveStates() {
 }
 
 // ============================================
+// НАСТРОЙКИ
+// ============================================
+function initSettings() {
+  ollamaUrlInput.value = OLLAMA_URL;
+  ollamaModelInput.value = OLLAMA_MODEL;
+  
+  ollamaUrlInput.addEventListener('change', (e) => {
+    OLLAMA_URL = e.target.value;
+    localStorage.setItem('ollama_url', OLLAMA_URL);
+    showNotif('URL обновлён');
+  });
+  
+  ollamaModelInput.addEventListener('change', (e) => {
+    OLLAMA_MODEL = e.target.value;
+    localStorage.setItem('ollama_model', OLLAMA_MODEL);
+    showNotif('Модель обновлена');
+  });
+  
+  settingsBtn.addEventListener('click', () => {
+    settingsPanel.classList.add('open');
+    updateStateDisplay();
+  });
+  
+  closeSettings.addEventListener('click', () => {
+    settingsPanel.classList.remove('open');
+  });
+  
+  settingsPanel.addEventListener('click', (e) => {
+    if (e.target === settingsPanel) {
+      settingsPanel.classList.remove('open');
+    }
+  });
+}
+
+// ============================================
+// СОБЫТИЯ ВВОДА
+// ============================================
+function initInputEvents() {
+  sendBtn.addEventListener('click', handleSend);
+  
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+  
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  });
+}
+
+// ============================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================
 function init() {
   loadLocal();
   updateMoodBar();
   updateStateDisplay();
+  initSettings();
+  initInputEvents();
   
   setInterval(updatePassiveStates, 120000);
   
-  ollamaUrlInput.value = OLLAMA_URL;
-  ollamaModelInput.value = OLLAMA_MODEL;
+  if (initiativeInterval) clearInterval(initiativeInterval);
+  initiativeInterval = setInterval(sendInitiativeMessage, 300000);
   
   inputEl.focus();
 }
