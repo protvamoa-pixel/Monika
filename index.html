@@ -93,6 +93,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </style>
 </head>
 <body>
+  <input type="file" id="file-input" style="display:none" accept=".txt,.md,.json,.csv,.pdf,.py,.js,.html,.css,.xml,.log,.env,.sql">
 
 <div id="header">
   <div class="avatar-wrap">
@@ -103,6 +104,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div id="header-title">Моника</div>
     <div id="header-status">онлайн</div>
   </div>
+  <button class="hdr-btn" id="file-btn" title="Загрузить файл">📎</button>
   <button class="hdr-btn" id="settings-btn" title="Настройки">⚙</button>
 </div>
 
@@ -423,7 +425,22 @@ async function generateResponse(userMessage) {
     }
 
     const data = await response.json();
-    return data.response || 'Прости, я не смогла сформулировать ответ...';
+    const response = data.response || 'Прости, я не смогла сформулировать ответ...';
+
+    if (userMessage.toLowerCase().includes('создай файл') || 
+    userMessage.toLowerCase().includes('запиши в файл') ||
+    userMessage.toLowerCase().includes('сохрани как')) {
+    
+    const fileNameMatch = userMessage.match(/(?:как|в|файл)\s+["']?([\w\-\.]+\.\w{1,5})["']?/i);
+    const defaultName = 'monika_output.txt';
+    const fileName = fileNameMatch ? fileNameMatch[1] : defaultName;
+    
+    setTimeout(() => createFile(response, fileName), 500);
+    
+    return response + '\n\n📁 *Файл ' + fileName + ' создан и скачан*';
+}
+
+return response;
     
   } catch(error) {
     console.error('Ошибка генерации:', error);
@@ -695,6 +712,105 @@ async function init() {
   inputEl.focus();
 }
 
+// === РАБОТА С ФАЙЛАМИ ===
+const fileInput = document.getElementById('file-input');
+const fileBtn = document.getElementById('file-btn');
+
+fileBtn.addEventListener('click', () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    showNotif(`Читаю ${file.name}...`);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch(`${OLLAMA_URL}/api/file/read`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            addMessage('user', `📎 Загружен файл: ${data.fileName} (${data.charCount} символов)`);
+            
+            typingIndicator.classList.add('show');
+            avatar.classList.add('thinking');
+            statusDot.classList.add('busy');
+            headerStatus.textContent = 'читает файл...';
+            
+            await sleep(500);
+            
+            const analysisPrompt = `Пользователь загрузил файл "${data.fileName}". Вот его содержимое:\n\n${data.content}\n\nПроанализируй этот файл. Расскажи, что в нём, кратко (2-4 предложения). Если это код — скажи, что он делает. Если текст — о чём он.`;
+            
+            const ollamaResponse = await fetch(`${OLLAMA_URL}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: OLLAMA_MODEL,
+                    prompt: `Ты Моника. ${analysisPrompt}`,
+                    stream: false,
+                    options: { temperature: 0.7, num_predict: 250 }
+                })
+            });
+
+            const ollamaData = await ollamaResponse.json();
+            
+            typingIndicator.classList.remove('show');
+            avatar.classList.remove('thinking');
+            statusDot.classList.remove('busy');
+            headerStatus.textContent = 'онлайн';
+            
+            addMessage('assistant', ollamaData.response || 'Не удалось проанализировать файл.');
+            memorySave('assistant', ollamaData.response || '');
+        } else {
+            showNotif('Ошибка чтения файла');
+        }
+    } catch (error) {
+        console.error('File upload error:', error);
+        showNotif('Ошибка загрузки файла');
+    }
+
+    fileInput.value = '';
+});
+
+// Функция для создания файла из ответа Моники
+async function createFile(content, fileName) {
+    try {
+        const response = await fetch(`${OLLAMA_URL}/api/file/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, fileName })
+        });
+
+        if (!response.ok) throw new Error('Ошибка создания файла');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        
+        showNotif(`Файл ${fileName} скачан`);
+    } catch (error) {
+        console.error('File create error:', error);
+        showNotif('Ошибка создания файла');
+    }
+}
+
+inputEl.addEventListener('input', () => {
+});
+  
 init();
 </script>
 </body>
