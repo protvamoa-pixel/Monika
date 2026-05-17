@@ -419,7 +419,7 @@ async function generateResponse(userMessage) {
         stream: false,
         options: {
           temperature: 0.85,
-          num_predict: 200
+          num_predict: 4096
         }
       })
     });
@@ -431,24 +431,54 @@ async function generateResponse(userMessage) {
     const data = await fetchResponse.json();
     let reply = data.response || 'Прости, я не смогла сформулировать ответ...';
 
-    // Проверяем, просили ли создать файл
-    if (userMessage.toLowerCase().includes('создай файл') || 
-        userMessage.toLowerCase().includes('запиши в файл') ||
-        userMessage.toLowerCase().includes('сохрани как')) {
-        
-        const fileNameMatch = userMessage.match(/(?:как|в|файл)\s+["']?([\w\-\.]+\.\w{1,5})["']?/i);
-        const defaultName = 'monika_output.txt';
-        const fileName = fileNameMatch ? fileNameMatch[1] : defaultName;
-        
-        // Вызываем createFile с задержкой
-        setTimeout(() => {
-            if (typeof createFile === 'function') {
-                createFile(reply, fileName);
-            }
-        }, 500);
-        
-        reply = reply + '\n\n📁 *Файл ' + fileName + ' создан и скачан*';
-    }
+  // Проверяем, просили ли создать файл
+  if (userMessage.toLowerCase().includes('создай файл') || 
+      userMessage.toLowerCase().includes('запиши в файл') ||
+      userMessage.toLowerCase().includes('сохрани как') ||
+      userMessage.toLowerCase().includes('напиши код') ||
+      userMessage.toLowerCase().includes('игру на html') ||
+      userMessage.toLowerCase().includes('сделай файл')) {
+      
+      const fileNameMatch = userMessage.match(/(?:как|в|файл|назови)\s+["']?([\w\-\.]+\.\w{2,6})["']?/i);
+      
+      // Определяем расширение по запросу
+      let fileName = 'monika_output.txt';
+      if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+      } else if (userMessage.toLowerCase().includes('html')) {
+          fileName = 'index.html';
+      } else if (userMessage.toLowerCase().includes('css')) {
+          fileName = 'style.css';
+      } else if (userMessage.toLowerCase().includes('javascript') || userMessage.toLowerCase().includes('js')) {
+          fileName = 'script.js';
+      } else if (userMessage.toLowerCase().includes('python') || userMessage.toLowerCase().includes('py')) {
+          fileName = 'script.py';
+      }
+      
+      // Извлекаем только содержимое файла (всё после последнего ``` если есть)
+      let fileContent = reply;
+      const codeBlockMatch = reply.match(/```[\w]*\n([\s\S]*?)```/);
+      if (codeBlockMatch) {
+          fileContent = codeBlockMatch[1];
+      }
+      
+      // Для чата — короткое описание
+      let shortReply = reply;
+      if (reply.length > 300) {
+          shortReply = 'Я создала файл **' + fileName + '**. Вот краткое описание:\n\n' + reply.substring(0, 250) + '...\n\n📁 *Файл ' + fileName + ' скачан*';
+      } else {
+          shortReply = reply + '\n\n📁 *Файл ' + fileName + ' создан и скачан*';
+      }
+      
+      // Создаём файл с полным содержимым
+      setTimeout(() => {
+          if (typeof createFile === 'function') {
+              createFile(fileContent, fileName);
+          }
+      }, 500);
+      
+      reply = shortReply;
+  }
 
     return reply;
     
