@@ -93,7 +93,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </style>
 </head>
 <body>
-  <input type="file" id="file-input" style="display:none" accept=".txt,.md,.json,.csv,.pdf,.py,.js,.html,.css,.xml,.log,.env,.sql">
+
+<input type="file" id="file-input" style="display:none" accept=".txt,.md,.json,.csv,.pdf,.py,.js,.html,.css,.xml,.log,.env,.sql">
 
 <div id="header">
   <div class="avatar-wrap">
@@ -133,69 +134,27 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <div class="panel-overlay" id="settings-panel">
   <div class="panel-sheet">
-    <h3>
-      Настройки
-      <button class="close-btn" id="close-settings">×</button>
-    </h3>
-    
+    <h3>Настройки<button class="close-btn" id="close-settings">×</button></h3>
     <div class="settings-section">
       <h4>Подключение Ollama</h4>
-      <div class="setting-row">
-        <label>URL:</label>
-        <input type="text" class="setting-input" id="ollama-url" value="https://4b45fb7c-8965-4b85-ac11-58cbc0bc5c3a.tunnel4.com">
-      </div>
-      <div class="setting-row">
-        <label>Модель:</label>
-        <input type="text" class="setting-input" id="ollama-model" value="llama3.2:3b">
-      </div>
+      <div class="setting-row"><label>URL:</label><input type="text" class="setting-input" id="ollama-url" value="https://4b45fb7c-8965-4b85-ac11-58cbc0bc5c3a.tunnel4.com"></div>
+      <div class="setting-row"><label>Модель:</label><input type="text" class="setting-input" id="ollama-model" value="llama3.2:3b"></div>
     </div>
-
     <div class="settings-section">
       <h4>Память</h4>
-      <div class="setting-row">
-        <label>User ID:</label>
-        <input type="text" class="setting-input" id="memory-user-id" value="monika_user">
-      </div>
+      <div class="setting-row"><label>User ID:</label><input type="text" class="setting-input" id="memory-user-id" value="monika_user"></div>
       <button class="btn-danger" id="clear-memory-btn">🗑 Очистить память</button>
     </div>
-
     <div class="settings-section">
       <h4>Состояние Моники</h4>
-      <div class="state-item">
-        <div class="state-label">
-          <span>Энергия</span>
-          <span id="energy-val">80%</span>
-        </div>
-        <div class="state-bar"><div class="state-fill" id="energy-bar" style="width:80%"></div></div>
-      </div>
-      <div class="state-item">
-        <div class="state-label">
-          <span>Настроение</span>
-          <span id="mood-val">70%</span>
-        </div>
-        <div class="state-bar"><div class="state-fill" id="mood-bar-fill" style="width:70%"></div></div>
-      </div>
-      <div class="state-item">
-        <div class="state-label">
-          <span>Привязанность</span>
-          <span id="affection-val">60%</span>
-        </div>
-        <div class="state-bar"><div class="state-fill" id="affection-bar" style="width:60%"></div></div>
-      </div>
-      <div class="state-item">
-        <div class="state-label">
-          <span>Одиночество</span>
-          <span id="loneliness-val">30%</span>
-        </div>
-        <div class="state-bar"><div class="state-fill" id="loneliness-bar" style="width:30%"></div></div>
-      </div>
+      <div class="state-item"><div class="state-label"><span>Энергия</span><span id="energy-val">80%</span></div><div class="state-bar"><div class="state-fill" id="energy-bar" style="width:80%"></div></div></div>
+      <div class="state-item"><div class="state-label"><span>Настроение</span><span id="mood-val">70%</span></div><div class="state-bar"><div class="state-fill" id="mood-bar-fill" style="width:70%"></div></div></div>
+      <div class="state-item"><div class="state-label"><span>Привязанность</span><span id="affection-val">60%</span></div><div class="state-bar"><div class="state-fill" id="affection-bar" style="width:60%"></div></div></div>
+      <div class="state-item"><div class="state-label"><span>Одиночество</span><span id="loneliness-val">30%</span></div><div class="state-bar"><div class="state-fill" id="loneliness-bar" style="width:30%"></div></div></div>
     </div>
-
     <div class="memory-section">
       <h4>Недавние воспоминания</h4>
-      <div id="memory-list">
-        <div class="memory-item">Загрузка...</div>
-      </div>
+      <div id="memory-list"><div class="memory-item">Загрузка...</div></div>
     </div>
   </div>
 </div>
@@ -203,28 +162,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div id="notif"></div>
 
 <script>
-// КОНФИГУРАЦИЯ
 const DEFAULT_OLLAMA_URL = 'https://4b45fb7c-8965-4b85-ac11-58cbc0bc5c3a.tunnel4.com';
 let OLLAMA_URL = localStorage.getItem('ollama_url') || DEFAULT_OLLAMA_URL;
 let OLLAMA_MODEL = localStorage.getItem('ollama_model') || 'llama3.2:3b';
 let USER_ID = localStorage.getItem('memory_user_id') || 'monika_user';
 const MEMORY_ENABLED = true;
 
-// СОСТОЯНИЕ
-let monicaState = {
-  energy: 0.8,
-  mood: 0.7,
-  affection: 0.6,
-  loneliness: 0.3,
-  lastInteraction: Date.now()
-};
-
+let monicaState = { energy: 0.8, mood: 0.7, affection: 0.6, loneliness: 0.3, lastInteraction: Date.now() };
 let conversationHistory = [];
 let memory = [];
 let isSending = false;
 let initiativeInterval = null;
 
-// DOM ЭЛЕМЕНТЫ
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send-btn');
@@ -242,11 +191,10 @@ const ollamaUrlInput = document.getElementById('ollama-url');
 const ollamaModelInput = document.getElementById('ollama-model');
 const memoryUserIdInput = document.getElementById('memory-user-id');
 const clearMemoryBtn = document.getElementById('clear-memory-btn');
+const fileInput = document.getElementById('file-input');
+const fileBtn = document.getElementById('file-btn');
 
-// УТИЛИТЫ
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 function getTimeOfDay() {
   const hour = new Date().getHours();
@@ -268,564 +216,261 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// === MEMORY API ===
 async function memorySave(role, content) {
   if (!MEMORY_ENABLED) return;
-  try {
-    await fetch(`${OLLAMA_URL}/api/memory/save`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: USER_ID, role, content })
-    });
-  } catch(e) {
-    console.warn('Memory save failed:', e.message);
-  }
+  try { await fetch(`${OLLAMA_URL}/api/memory/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: USER_ID, role, content }) }); } catch(e) {}
 }
 
 async function memoryLoadHistory(limit = 30) {
   if (!MEMORY_ENABLED) return [];
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/memory/history/${USER_ID}?limit=${limit}`);
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.history || [];
-  } catch(e) {
-    console.warn('Memory load failed:', e.message);
-    return [];
-  }
+    const r = await fetch(`${OLLAMA_URL}/api/memory/history/${USER_ID}?limit=${limit}`);
+    if (!r.ok) return [];
+    const d = await r.json();
+    return d.history || [];
+  } catch(e) { return []; }
 }
 
 async function memoryClear() {
   if (!MEMORY_ENABLED) return;
-  try {
-    await fetch(`${OLLAMA_URL}/api/memory/clear/${USER_ID}`, { method: 'DELETE' });
-    showNotif('Память очищена');
-  } catch(e) {
-    console.warn('Memory clear failed:', e.message);
-  }
+  try { await fetch(`${OLLAMA_URL}/api/memory/clear/${USER_ID}`, { method: 'DELETE' }); showNotif('Память очищена'); } catch(e) {}
 }
 
 async function memorySearch(query) {
   if (!MEMORY_ENABLED) return [];
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/memory/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: USER_ID, query, limit: 5 })
-    });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.results || [];
-  } catch(e) {
-    return [];
-  }
+    const r = await fetch(`${OLLAMA_URL}/api/memory/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: USER_ID, query, limit: 5 }) });
+    if (!r.ok) return [];
+    const d = await r.json();
+    return d.results || [];
+  } catch(e) { return []; }
 }
 
-// ЛОКАЛЬНОЕ ХРАНИЛИЩЕ
-function saveLocal() {
-  localStorage.setItem('monica_state', JSON.stringify(monicaState));
-}
+function saveLocal() { localStorage.setItem('monica_state', JSON.stringify(monicaState)); }
 
 function loadLocal() {
-  try {
-    const savedState = localStorage.getItem('monica_state');
-    if (savedState) monicaState = JSON.parse(savedState);
-  } catch(e) {
-    console.error('Ошибка загрузки:', e);
-  }
+  try { const s = localStorage.getItem('monica_state'); if (s) monicaState = JSON.parse(s); } catch(e) {}
 }
 
 function updateMoodBar() {
   const moods = [];
-  if (monicaState.energy > 0.7) moods.push('энергичная');
-  else if (monicaState.energy < 0.3) moods.push('уставшая');
-  if (monicaState.mood > 0.7) moods.push('радостная');
-  else if (monicaState.mood < 0.3) moods.push('грустная');
+  if (monicaState.energy > 0.7) moods.push('энергичная'); else if (monicaState.energy < 0.3) moods.push('уставшая');
+  if (monicaState.mood > 0.7) moods.push('радостная'); else if (monicaState.mood < 0.3) moods.push('грустная');
   if (monicaState.affection > 0.7) moods.push('нежная');
   if (monicaState.loneliness > 0.6) moods.push('одинокая');
   moodBarEl.innerHTML = moods.map(m => `<div class="mtag">${m}</div>`).join('');
 }
 
 function updateStateDisplay() {
-  const toPercent = (val) => Math.round(val * 100);
-  document.getElementById('energy-val').textContent = toPercent(monicaState.energy) + '%';
-  document.getElementById('energy-bar').style.width = toPercent(monicaState.energy) + '%';
-  document.getElementById('mood-val').textContent = toPercent(monicaState.mood) + '%';
-  document.getElementById('mood-bar-fill').style.width = toPercent(monicaState.mood) + '%';
-  document.getElementById('affection-val').textContent = toPercent(monicaState.affection) + '%';
-  document.getElementById('affection-bar').style.width = toPercent(monicaState.affection) + '%';
-  document.getElementById('loneliness-val').textContent = toPercent(monicaState.loneliness) + '%';
-  document.getElementById('loneliness-bar').style.width = toPercent(monicaState.loneliness) + '%';
+  const p = (v) => Math.round(v * 100);
+  document.getElementById('energy-val').textContent = p(monicaState.energy) + '%';
+  document.getElementById('energy-bar').style.width = p(monicaState.energy) + '%';
+  document.getElementById('mood-val').textContent = p(monicaState.mood) + '%';
+  document.getElementById('mood-bar-fill').style.width = p(monicaState.mood) + '%';
+  document.getElementById('affection-val').textContent = p(monicaState.affection) + '%';
+  document.getElementById('affection-bar').style.width = p(monicaState.affection) + '%';
+  document.getElementById('loneliness-val').textContent = p(monicaState.loneliness) + '%';
+  document.getElementById('loneliness-bar').style.width = p(monicaState.loneliness) + '%';
 }
 
-// СООБЩЕНИЯ
 function addMessage(role, content, save = true) {
   if (emptyEl) emptyEl.remove();
-  
   const wrapper = document.createElement('div');
   wrapper.className = `mw ${role}`;
-  
   const timestamp = new Date().toLocaleTimeString('ru', {hour: '2-digit', minute: '2-digit'});
-  
   if (role === 'assistant') {
-    wrapper.innerHTML = `
-      <div class="ms">Моника</div>
-      <div class="mb">${escapeHtml(content)}</div>
-      <div class="mt">${timestamp}</div>
-    `;
+    wrapper.innerHTML = `<div class="ms">Моника</div><div class="mb">${escapeHtml(content)}</div><div class="mt">${timestamp}</div>`;
   } else {
-    wrapper.innerHTML = `
-      <div class="mb">${escapeHtml(content)}</div>
-      <div class="mt">${timestamp}</div>
-    `;
+    wrapper.innerHTML = `<div class="mb">${escapeHtml(content)}</div><div class="mt">${timestamp}</div>`;
   }
-  
   messagesEl.appendChild(wrapper);
   messagesEl.scrollTop = messagesEl.scrollHeight;
-  
-  if (save) {
-    conversationHistory.push({ role, content, timestamp: Date.now() });
-    if (conversationHistory.length > 50) conversationHistory.shift();
-  }
+  if (save) { conversationHistory.push({ role, content, timestamp: Date.now() }); if (conversationHistory.length > 50) conversationHistory.shift(); }
 }
 
-// ГЕНЕРАЦИЯ ОТВЕТА
-// ГЕНЕРАЦИЯ ОТВЕТА
 async function generateResponse(userMessage) {
   const timeOfDay = getTimeOfDay();
   const energyDesc = monicaState.energy > 0.7 ? 'энергична' : (monicaState.energy < 0.3 ? 'устала' : 'нормально');
   const moodDesc = monicaState.mood > 0.7 ? 'радостна' : (monicaState.mood < 0.3 ? 'грустна' : 'спокойна');
-  
-  // Ищем релевантные воспоминания
   const relevantMemories = await memorySearch(userMessage);
   let memoryContext = '';
   if (relevantMemories.length > 0) {
-    memoryContext = '\n\nТвои прошлые разговоры на похожие темы:\n' + 
-      relevantMemories.map(m => `- ${m.role === 'user' ? 'Пользователь' : 'Ты'}: ${m.content}`).join('\n');
+    memoryContext = '\n\nТвои прошлые разговоры на похожие темы:\n' + relevantMemories.map(m => `- ${m.role === 'user' ? 'Пользователь' : 'Ты'}: ${m.content}`).join('\n');
   }
-  
   const systemPrompt = `Ты - Моника, виртуальный помощник. Отвечай коротко (2-4 предложения), по-русски, естественно. Сейчас ${timeOfDay}. Ты ${energyDesc} и ${moodDesc}.${memoryContext}`;
-
   try {
-    const fetchResponse = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt: `${systemPrompt}\n\nПользователь: ${userMessage}\n\nМоника:`,
-        stream: false,
-        options: {
-          temperature: 0.85,
-          num_predict: 200
-        }
-      })
+    const fetchResp = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: OLLAMA_MODEL, prompt: `${systemPrompt}\n\nПользователь: ${userMessage}\n\nМоника:`, stream: false, options: { temperature: 0.85, num_predict: 200 } })
     });
-
-    if (!fetchResponse.ok) {
-      throw new Error(`Ошибка: ${fetchResponse.status}`);
-    }
-
-    const data = await fetchResponse.json();
+    if (!fetchResp.ok) throw new Error(`Ошибка: ${fetchResp.status}`);
+    const data = await fetchResp.json();
     let reply = data.response || 'Прости, я не смогла сформулировать ответ...';
-
-    // Проверяем, просили ли создать файл
-    if (userMessage.toLowerCase().includes('создай файл') || 
-        userMessage.toLowerCase().includes('запиши в файл') ||
-        userMessage.toLowerCase().includes('сохрани как')) {
-        
-        const fileNameMatch = userMessage.match(/(?:как|в|файл)\s+["']?([\w\-\.]+\.\w{1,5})["']?/i);
-        const defaultName = 'monika_output.txt';
-        const fileName = fileNameMatch ? fileNameMatch[1] : defaultName;
-        
-        // Вызываем createFile с задержкой
-        setTimeout(() => {
-            if (typeof createFile === 'function') {
-                createFile(reply, fileName);
-            }
-        }, 500);
-        
-        reply = reply + '\n\n📁 *Файл ' + fileName + ' создан и скачан*';
+    if (userMessage.toLowerCase().includes('создай файл') || userMessage.toLowerCase().includes('запиши в файл') || userMessage.toLowerCase().includes('сохрани как')) {
+      const m = userMessage.match(/(?:как|в|файл)\s+["']?([\w\-\.]+\.\w{1,5})["']?/i);
+      const fn = m ? m[1] : 'monika_output.txt';
+      setTimeout(() => { if (typeof createFile === 'function') createFile(reply, fn); }, 500);
+      reply = reply + '\n\n📁 *Файл ' + fn + ' создан и скачан*';
     }
-
     return reply;
-    
   } catch(error) {
     console.error('Ошибка генерации:', error);
     showNotif('Ошибка подключения к Ollama');
     return 'Кажется, у меня проблемы с подключением... Проверь настройки Ollama.';
   }
 }
-return response;
-    
-  } catch(error) {
-    console.error('Ошибка генерации:', error);
-    showNotif('Ошибка подключения к Ollama');
-    return 'Кажется, у меня проблемы с подключением... Проверь настройки Ollama.';
-  }
-}
-  
-// ИНИЦИАТИВНЫЕ СООБЩЕНИЯ
-async function generateInitiativeMessage() {
-  const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
-  const hoursSinceLast = Math.floor(minutesSinceLast / 60);
-  const timeOfDay = getTimeOfDay();
-  
-  let context = `Сейчас ${timeOfDay}. Прошло ${hoursSinceLast > 0 ? hoursSinceLast + ' часов' : Math.floor(minutesSinceLast) + ' минут'} с последнего сообщения.`;
-  
-  if (monicaState.loneliness > 0.6) {
-    context += ' Ты чувствуешь себя одинокой и хочешь пообщаться.';
-  } else if (monicaState.energy < 0.3) {
-    context += ' Ты устала, но всё равно думаешь о собеседнике.';
-  } else if (monicaState.affection > 0.7) {
-    context += ' Ты скучаешь и хочешь сказать что-то приятное.';
-  }
-  
-  context += ' Напиши короткое сообщение (1-2 предложения), чтобы начать разговор.';
 
+async function generateInitiativeMessage() {
+  const mins = (Date.now() - monicaState.lastInteraction) / 60000;
+  const hrs = Math.floor(mins / 60);
+  const tod = getTimeOfDay();
+  let ctx = `Сейчас ${tod}. Прошло ${hrs > 0 ? hrs + ' часов' : Math.floor(mins) + ' минут'} с последнего сообщения.`;
+  if (monicaState.loneliness > 0.6) ctx += ' Ты одинока.';
+  else if (monicaState.energy < 0.3) ctx += ' Ты устала, но думаешь о собеседнике.';
+  else if (monicaState.affection > 0.7) ctx += ' Ты скучаешь.';
+  ctx += ' Напиши короткое сообщение (1-2 предложения).';
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt: `Ты Моника. ${context}`,
-        stream: false,
-        options: { temperature: 0.85, num_predict: 60 }
-      })
-    });
-    const data = await response.json();
-    return data.response || '';
-  } catch(e) {
-    return '';
-  }
+    const r = await fetch(`${OLLAMA_URL}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: OLLAMA_MODEL, prompt: `Ты Моника. ${ctx}`, stream: false, options: { temperature: 0.85, num_predict: 60 } }) });
+    const d = await r.json();
+    return d.response || '';
+  } catch(e) { return ''; }
 }
 
 async function sendInitiativeMessage() {
   if (isSending) return;
-  const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
-  const shouldSend = 
-    (monicaState.loneliness > 0.65 && minutesSinceLast > 8) ||
-    (monicaState.affection > 0.75 && minutesSinceLast > 15 && Math.random() < 0.3) ||
-    (minutesSinceLast > 30 && Math.random() < 0.2);
-  if (!shouldSend) return;
-  
-  typingIndicator.classList.add('show');
-  avatar.classList.add('thinking');
+  const mins = (Date.now() - monicaState.lastInteraction) / 60000;
+  if (!((monicaState.loneliness > 0.65 && mins > 8) || (monicaState.affection > 0.75 && mins > 15 && Math.random() < 0.3) || (mins > 30 && Math.random() < 0.2))) return;
+  typingIndicator.classList.add('show'); avatar.classList.add('thinking');
   await sleep(1200 + Math.random() * 1500);
-  const message = await generateInitiativeMessage();
-  typingIndicator.classList.remove('show');
-  avatar.classList.remove('thinking');
-  
-  if (message && message.length > 2) {
-    addMessage('assistant', message);
-    memorySave('assistant', message);
+  const msg = await generateInitiativeMessage();
+  typingIndicator.classList.remove('show'); avatar.classList.remove('thinking');
+  if (msg && msg.length > 2) {
+    addMessage('assistant', msg); memorySave('assistant', msg);
     monicaState.loneliness = Math.max(0, monicaState.loneliness - 0.1);
     monicaState.lastInteraction = Date.now();
-    updateMoodBar();
-    updateStateDisplay();
-    saveLocal();
+    updateMoodBar(); updateStateDisplay(); saveLocal();
   }
 }
 
-// ЗАГРУЗКА ИСТОРИИ ИЗ БАЗЫ ДАННЫХ
 async function loadHistoryFromDB() {
-  const history = await memoryLoadHistory(30);
-  if (history.length > 0) {
-    // Убираем начальное сообщение "пусто"
+  const h = await memoryLoadHistory(30);
+  if (h.length > 0) {
     if (emptyEl) emptyEl.remove();
-    
-    history.forEach(msg => {
-      addMessage(msg.role, msg.content, false);
-    });
-    
-    // Восстанавливаем историю в conversationHistory
-    conversationHistory = history.map(m => ({
-      role: m.role,
-      content: m.content,
-      timestamp: new Date(m.timestamp).getTime()
-    }));
-    
-    showNotif(`Загружено ${history.length} сообщений`);
+    h.forEach(m => addMessage(m.role, m.content, false));
+    conversationHistory = h.map(m => ({ role: m.role, content: m.content, timestamp: new Date(m.timestamp).getTime() }));
+    showNotif(`Загружено ${h.length} сообщений`);
   }
-  
-  // Обновляем список воспоминаний в настройках
-  updateMemoryListInSettings(history);
+  updateMemoryListInSettings(h);
 }
 
 function updateMemoryListInSettings(history) {
-  const memoryList = document.getElementById('memory-list');
-  if (!history || history.length === 0) {
-    memoryList.innerHTML = '<div class="memory-item">Память пуста</div>';
-  } else {
-    memoryList.innerHTML = history.slice(-5).map(m => 
-      `<div class="memory-item">${m.role === 'user' ? '💬' : '💜'} ${escapeHtml(m.content).substring(0, 60)}...</div>`
-    ).join('');
-  }
+  const ml = document.getElementById('memory-list');
+  if (!history || history.length === 0) ml.innerHTML = '<div class="memory-item">Память пуста</div>';
+  else ml.innerHTML = history.slice(-5).map(m => `<div class="memory-item">${m.role === 'user' ? '💬' : '💜'} ${escapeHtml(m.content).substring(0, 60)}...</div>`).join('');
 }
 
-// ОБРАБОТКА ВВОДА
 async function handleSend() {
   const text = inputEl.value.trim();
   if (!text || isSending) return;
-  
-  isSending = true;
-  sendBtn.disabled = true;
-  
-  addMessage('user', text);
-  memorySave('user', text);
-  
-  inputEl.value = '';
-  inputEl.style.height = 'auto';
-  
+  isSending = true; sendBtn.disabled = true;
+  addMessage('user', text); memorySave('user', text);
+  inputEl.value = ''; inputEl.style.height = 'auto';
   monicaState.lastInteraction = Date.now();
   monicaState.loneliness = Math.max(0, monicaState.loneliness - 0.15);
   monicaState.affection = Math.min(1, monicaState.affection + 0.05);
   monicaState.mood = Math.min(1, monicaState.mood + 0.08);
-  
-  typingIndicator.classList.add('show');
-  avatar.classList.add('thinking');
-  statusDot.classList.add('busy');
-  headerStatus.textContent = 'печатает...';
-  
+  typingIndicator.classList.add('show'); avatar.classList.add('thinking'); statusDot.classList.add('busy'); headerStatus.textContent = 'печатает...';
   await sleep(800 + Math.random() * 1200);
-  
-  const response = await generateResponse(text);
-  
-  typingIndicator.classList.remove('show');
-  avatar.classList.remove('thinking');
-  statusDot.classList.remove('busy');
-  headerStatus.textContent = 'онлайн';
-  
-  addMessage('assistant', response);
-  memorySave('assistant', response);
-  
+  const reply = await generateResponse(text);
+  typingIndicator.classList.remove('show'); avatar.classList.remove('thinking'); statusDot.classList.remove('busy'); headerStatus.textContent = 'онлайн';
+  addMessage('assistant', reply); memorySave('assistant', reply);
   memory.push(`${new Date().toLocaleDateString()}: ${text.substring(0, 50)}...`);
   if (memory.length > 20) memory.shift();
-  
   monicaState.energy = Math.max(0.2, monicaState.energy - 0.02);
-  
-  updateMoodBar();
-  updateStateDisplay();
-  saveLocal();
-  
-  // Обновляем список памяти в настройках
-  const history = await memoryLoadHistory(5);
-  updateMemoryListInSettings(history);
-  
-  isSending = false;
-  sendBtn.disabled = false;
-  inputEl.focus();
+  updateMoodBar(); updateStateDisplay(); saveLocal();
+  const h = await memoryLoadHistory(5); updateMemoryListInSettings(h);
+  isSending = false; sendBtn.disabled = false; inputEl.focus();
 }
 
-// ФОНОВЫЕ ПРОЦЕССЫ
 function updatePassiveStates() {
-  const minutesSinceLast = (Date.now() - monicaState.lastInteraction) / 60000;
-  if (minutesSinceLast > 10) {
-    monicaState.loneliness = Math.min(1, monicaState.loneliness + 0.01);
-  }
-  if (monicaState.energy < 0.9) {
-    monicaState.energy = Math.min(1, monicaState.energy + 0.005);
-  }
-  if (minutesSinceLast > 20) {
-    monicaState.mood = Math.max(0.3, monicaState.mood - 0.005);
-  }
-  updateMoodBar();
-  updateStateDisplay();
-  saveLocal();
+  const mins = (Date.now() - monicaState.lastInteraction) / 60000;
+  if (mins > 10) monicaState.loneliness = Math.min(1, monicaState.loneliness + 0.01);
+  if (monicaState.energy < 0.9) monicaState.energy = Math.min(1, monicaState.energy + 0.005);
+  if (mins > 20) monicaState.mood = Math.max(0.3, monicaState.mood - 0.005);
+  updateMoodBar(); updateStateDisplay(); saveLocal();
 }
 
-// НАСТРОЙКИ
+async function createFile(content, fileName) {
+  try {
+    const r = await fetch(`${OLLAMA_URL}/api/file/create`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, fileName }) });
+    if (!r.ok) throw new Error('Ошибка');
+    const blob = await r.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click();
+    window.URL.revokeObjectURL(url); a.remove();
+    showNotif(`Файл ${fileName} скачан`);
+  } catch(e) { console.error('File create error:', e); showNotif('Ошибка создания файла'); }
+}
+
 function initSettings() {
-  ollamaUrlInput.value = OLLAMA_URL;
-  ollamaModelInput.value = OLLAMA_MODEL;
-  memoryUserIdInput.value = USER_ID;
-  
-  ollamaUrlInput.addEventListener('change', (e) => {
-    OLLAMA_URL = e.target.value;
-    localStorage.setItem('ollama_url', OLLAMA_URL);
-    showNotif('URL обновлён');
-  });
-  
-  ollamaModelInput.addEventListener('change', (e) => {
-    OLLAMA_MODEL = e.target.value;
-    localStorage.setItem('ollama_model', OLLAMA_MODEL);
-    showNotif('Модель обновлена');
-  });
-  
-  memoryUserIdInput.addEventListener('change', (e) => {
-    USER_ID = e.target.value;
-    localStorage.setItem('memory_user_id', USER_ID);
-    showNotif('User ID обновлён');
-  });
-  
+  ollamaUrlInput.value = OLLAMA_URL; ollamaModelInput.value = OLLAMA_MODEL; memoryUserIdInput.value = USER_ID;
+  ollamaUrlInput.addEventListener('change', e => { OLLAMA_URL = e.target.value; localStorage.setItem('ollama_url', OLLAMA_URL); showNotif('URL обновлён'); });
+  ollamaModelInput.addEventListener('change', e => { OLLAMA_MODEL = e.target.value; localStorage.setItem('ollama_model', OLLAMA_MODEL); showNotif('Модель обновлена'); });
+  memoryUserIdInput.addEventListener('change', e => { USER_ID = e.target.value; localStorage.setItem('memory_user_id', USER_ID); showNotif('User ID обновлён'); });
   clearMemoryBtn.addEventListener('click', async () => {
     if (confirm('Точно очистить всю память?')) {
       await memoryClear();
-      messagesEl.innerHTML = `
-        <div id="empty">
-          <div class="big">💜</div>
-          <p>Память очищена. Начнём заново?</p>
-        </div>
-      `;
+      messagesEl.innerHTML = `<div id="empty"><div class="big">💜</div><p>Память очищена. Начнём заново?</p></div>`;
       conversationHistory = [];
       document.getElementById('memory-list').innerHTML = '<div class="memory-item">Память пуста</div>';
     }
   });
-  
-  settingsBtn.addEventListener('click', async () => {
-    settingsPanel.classList.add('open');
-    updateStateDisplay();
-    // Загружаем актуальный список памяти
-    const history = await memoryLoadHistory(5);
-    updateMemoryListInSettings(history);
-  });
-  
-  closeSettings.addEventListener('click', () => {
-    settingsPanel.classList.remove('open');
-  });
-  
-  settingsPanel.addEventListener('click', (e) => {
-    if (e.target === settingsPanel) {
-      settingsPanel.classList.remove('open');
-    }
-  });
+  settingsBtn.addEventListener('click', async () => { settingsPanel.classList.add('open'); updateStateDisplay(); const h = await memoryLoadHistory(5); updateMemoryListInSettings(h); });
+  closeSettings.addEventListener('click', () => settingsPanel.classList.remove('open'));
+  settingsPanel.addEventListener('click', e => { if (e.target === settingsPanel) settingsPanel.classList.remove('open'); });
 }
 
-// СОБЫТИЯ ВВОДА
 function initInputEvents() {
   sendBtn.addEventListener('click', handleSend);
-  
-  inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  });
-  
-  inputEl.addEventListener('input', () => {
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
-  });
+  inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
+  inputEl.addEventListener('input', () => { inputEl.style.height = 'auto'; inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px'; });
 }
 
-// ИНИЦИАЛИЗАЦИЯ
+fileBtn.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  showNotif(`Читаю ${file.name}...`);
+  const formData = new FormData(); formData.append('file', file);
+  try {
+    const r = await fetch(`${OLLAMA_URL}/api/file/read`, { method: 'POST', body: formData });
+    const d = await r.json();
+    if (d.success) {
+      addMessage('user', `📎 Загружен файл: ${d.fileName} (${d.charCount} символов)`);
+      typingIndicator.classList.add('show'); avatar.classList.add('thinking'); statusDot.classList.add('busy'); headerStatus.textContent = 'читает файл...';
+      await sleep(500);
+      const prompt = `Пользователь загрузил файл "${d.fileName}". Содержимое:\n\n${d.content}\n\nПроанализируй кратко (2-4 предложения). Если код — что делает. Если текст — о чём.`;
+      const r2 = await fetch(`${OLLAMA_URL}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: OLLAMA_MODEL, prompt: `Ты Моника. ${prompt}`, stream: false, options: { temperature: 0.7, num_predict: 250 } }) });
+      const d2 = await r2.json();
+      typingIndicator.classList.remove('show'); avatar.classList.remove('thinking'); statusDot.classList.remove('busy'); headerStatus.textContent = 'онлайн';
+      addMessage('assistant', d2.response || 'Не удалось проанализировать.');
+      memorySave('assistant', d2.response || '');
+    } else showNotif('Ошибка чтения файла');
+  } catch(er) { console.error(er); showNotif('Ошибка загрузки'); }
+  fileInput.value = '';
+});
+
 async function init() {
-  loadLocal();
-  updateMoodBar();
-  updateStateDisplay();
-  initSettings();
-  initInputEvents();
-  
-  // Загружаем историю из базы данных
+  loadLocal(); updateMoodBar(); updateStateDisplay(); initSettings(); initInputEvents();
   await loadHistoryFromDB();
-  
   setInterval(updatePassiveStates, 120000);
-  
   if (initiativeInterval) clearInterval(initiativeInterval);
   initiativeInterval = setInterval(sendInitiativeMessage, 300000);
-  
   inputEl.focus();
 }
 
-// === РАБОТА С ФАЙЛАМИ ===
-const fileInput = document.getElementById('file-input');
-const fileBtn = document.getElementById('file-btn');
-
-fileBtn.addEventListener('click', () => {
-    fileInput.click();
-});
-
-fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    showNotif(`Читаю ${file.name}...`);
-    
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-        const response = await fetch(`${OLLAMA_URL}/api/file/read`, {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            addMessage('user', `📎 Загружен файл: ${data.fileName} (${data.charCount} символов)`);
-            
-            typingIndicator.classList.add('show');
-            avatar.classList.add('thinking');
-            statusDot.classList.add('busy');
-            headerStatus.textContent = 'читает файл...';
-            
-            await sleep(500);
-            
-            const analysisPrompt = `Пользователь загрузил файл "${data.fileName}". Вот его содержимое:\n\n${data.content}\n\nПроанализируй этот файл. Расскажи, что в нём, кратко (2-4 предложения). Если это код — скажи, что он делает. Если текст — о чём он.`;
-            
-            const ollamaResponse = await fetch(`${OLLAMA_URL}/api/generate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: OLLAMA_MODEL,
-                    prompt: `Ты Моника. ${analysisPrompt}`,
-                    stream: false,
-                    options: { temperature: 0.7, num_predict: 250 }
-                })
-            });
-
-            const ollamaData = await ollamaResponse.json();
-            
-            typingIndicator.classList.remove('show');
-            avatar.classList.remove('thinking');
-            statusDot.classList.remove('busy');
-            headerStatus.textContent = 'онлайн';
-            
-            addMessage('assistant', ollamaData.response || 'Не удалось проанализировать файл.');
-            memorySave('assistant', ollamaData.response || '');
-        } else {
-            showNotif('Ошибка чтения файла');
-        }
-    } catch (error) {
-        console.error('File upload error:', error);
-        showNotif('Ошибка загрузки файла');
-    }
-
-    fileInput.value = '';
-});
-
-// Функция для создания файла из ответа Моники
-async function createFile(content, fileName) {
-    try {
-        const response = await fetch(`${OLLAMA_URL}/api/file/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content, fileName })
-        });
-
-        if (!response.ok) throw new Error('Ошибка создания файла');
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        
-        showNotif(`Файл ${fileName} скачан`);
-    } catch (error) {
-        console.error('File create error:', error);
-        showNotif('Ошибка создания файла');
-    }
-}
-
-inputEl.addEventListener('input', () => {
-});
-  
 init();
 </script>
 </body>
