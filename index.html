@@ -390,6 +390,7 @@ function addMessage(role, content, save = true) {
 }
 
 // ГЕНЕРАЦИЯ ОТВЕТА
+// ГЕНЕРАЦИЯ ОТВЕТА
 async function generateResponse(userMessage) {
   const timeOfDay = getTimeOfDay();
   const energyDesc = monicaState.energy > 0.7 ? 'энергична' : (monicaState.energy < 0.3 ? 'устала' : 'нормально');
@@ -406,7 +407,7 @@ async function generateResponse(userMessage) {
   const systemPrompt = `Ты - Моника, виртуальный помощник. Отвечай коротко (2-4 предложения), по-русски, естественно. Сейчас ${timeOfDay}. Ты ${energyDesc} и ${moodDesc}.${memoryContext}`;
 
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+    const fetchResponse = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -420,26 +421,40 @@ async function generateResponse(userMessage) {
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`Ошибка: ${response.status}`);
+    if (!fetchResponse.ok) {
+      throw new Error(`Ошибка: ${fetchResponse.status}`);
     }
 
-    const data = await response.json();
-    const response = data.response || 'Прости, я не смогла сформулировать ответ...';
+    const data = await fetchResponse.json();
+    let reply = data.response || 'Прости, я не смогла сформулировать ответ...';
 
+    // Проверяем, просили ли создать файл
     if (userMessage.toLowerCase().includes('создай файл') || 
-    userMessage.toLowerCase().includes('запиши в файл') ||
-    userMessage.toLowerCase().includes('сохрани как')) {
-    
-    const fileNameMatch = userMessage.match(/(?:как|в|файл)\s+["']?([\w\-\.]+\.\w{1,5})["']?/i);
-    const defaultName = 'monika_output.txt';
-    const fileName = fileNameMatch ? fileNameMatch[1] : defaultName;
-    
-    setTimeout(() => createFile(response, fileName), 500);
-    
-    return response + '\n\n📁 *Файл ' + fileName + ' создан и скачан*';
-}
+        userMessage.toLowerCase().includes('запиши в файл') ||
+        userMessage.toLowerCase().includes('сохрани как')) {
+        
+        const fileNameMatch = userMessage.match(/(?:как|в|файл)\s+["']?([\w\-\.]+\.\w{1,5})["']?/i);
+        const defaultName = 'monika_output.txt';
+        const fileName = fileNameMatch ? fileNameMatch[1] : defaultName;
+        
+        // Вызываем createFile с задержкой
+        setTimeout(() => {
+            if (typeof createFile === 'function') {
+                createFile(reply, fileName);
+            }
+        }, 500);
+        
+        reply = reply + '\n\n📁 *Файл ' + fileName + ' создан и скачан*';
+    }
 
+    return reply;
+    
+  } catch(error) {
+    console.error('Ошибка генерации:', error);
+    showNotif('Ошибка подключения к Ollama');
+    return 'Кажется, у меня проблемы с подключением... Проверь настройки Ollama.';
+  }
+}
 return response;
     
   } catch(error) {
