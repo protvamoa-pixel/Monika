@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Верстак — редактор HTML</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14161b;
+    --panel: #1a1d24;
+    --panel-alt: #20242c;
+    --border: #2b303a;
+    --border-soft: #23272f;
+    --text: #e9ecf2;
+    --text-dim: #8b93a5;
+    --text-faint: #5a6273;
+    --accent: #7c6fff;
+    --accent-soft: rgba(124,111,255,0.14);
+    --ok: #4fd6a8;
+    --ok-soft: rgba(79,214,168,0.14);
+    --warn: #ff6b6b;
+    --warn-soft: rgba(255,107,107,0.14);
+    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --display: 'Space Grotesk', 'Inter', sans-serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top left, rgba(124,111,255,0.06), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+  }
+  ::selection{background:var(--accent-soft); color:var(--text);}
+  button{font-family:var(--sans); cursor:pointer;}
+
+  .app{
+    display:grid;
+    grid-template-columns: 240px 1fr;
+    height:100vh;
+  }
+
+  /* SIDEBAR */
+  .sidebar{
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .brand{
+    padding:20px 18px 14px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .brand .mark{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.01em;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .brand .mark .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .brand .sub{
+    font-size:11.5px;
+    color:var(--text-faint);
+    margin-top:4px;
+    font-family:var(--mono);
+  }
+
+  .new-file-btn{
+    margin:14px 14px 8px;
+    background:var(--accent-soft);
+    border:1px solid rgba(124,111,255,0.35);
+    color:var(--accent);
+    border-radius:8px;
+    padding:9px 12px;
+    font-size:13px;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    transition:background .15s, transform .1s;
+  }
+  .new-file-btn:hover{background:rgba(124,111,255,0.22);}
+  .new-file-btn:active{transform:scale(0.98);}
+
+  .new-file-row{
+    margin:0 14px 10px;
+    display:none;
+    gap:6px;
+  }
+  .new-file-row.open{display:flex;}
+  .new-file-row input{
+    flex:1;
+    min-width:0;
+    background:var(--panel-alt);
+    border:1px solid var(--accent);
+    color:var(--text);
+    border-radius:6px;
+    padding:7px 8px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    outline:none;
+  }
+  .new-file-row button{
+    background:var(--accent);
+    border:none;
+    color:#fff;
+    border-radius:6px;
+    padding:0 10px;
+    font-size:12px;
+    font-weight:600;
+  }
+
+  .file-list{
+    flex:1;
+    overflow-y:auto;
+    padding:4px 8px 12px;
+  }
+  .file-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 9px;
+    border-radius:7px;
+    cursor:pointer;
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:12.5px;
+    margin-bottom:2px;
+    border:1px solid transparent;
+    position:relative;
+  }
+  .file-item:hover{background:var(--panel-alt); color:var(--text);}
+  .file-item.active{
+    background:var(--panel-alt);
+    color:var(--text);
+    border-color:var(--border);
+  }
+  .file-item.active::before{
+    content:"";
+    position:absolute; left:-8px; top:50%; transform:translateY(-50%);
+    width:3px; height:60%;
+    background:var(--accent);
+    border-radius:2px;
+  }
+  .file-item .fi-name{
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .file-item .fi-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--ok);
+    flex-shrink:0;
+    opacity:0;
+  }
+  .file-item.dirty .fi-dot{opacity:1;}
+  .file-item .fi-del{
+    opacity:0;
+    color:var(--text-faint);
+    background:none;border:none;
+    font-size:14px;
+    padding:0 2px;
+    line-height:1;
+  }
+  .file-item:hover .fi-del{opacity:1;}
+  .file-item .fi-del:hover{color:var(--warn);}
+
+  .empty-list{
+    color:var(--text-faint);
+    font-size:12px;
+    padding:14px 10px;
+    line-height:1.5;
+    font-family:var(--mono);
+  }
+
+  /* WORKSPACE */
+  .workspace{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    height:100vh;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 18px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel);
+    flex-wrap:wrap;
+  }
+  .filename-group{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    font-family:var(--mono);
+    min-width:0;
+  }
+  .filename-group input{
+    background:transparent;
+    border:1px solid transparent;
+    color:var(--text);
+    font-family:var(--mono);
+    font-weight:600;
+    font-size:14px;
+    padding:5px 7px;
+    border-radius:6px;
+    max-width:260px;
+    outline:none;
+  }
+  .filename-group input:hover, .filename-group input:focus{
+    background:var(--panel-alt);
+    border-color:var(--border);
+  }
+  .filename-group .ext{color:var(--text-faint); font-size:13px;}
+  .filename-group .empty-hint{
+    color:var(--text-faint);
+    font-size:13px;
+    font-family:var(--sans);
+  }
+
+  .actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .actions button{
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    border-radius:7px;
+    padding:8px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    display:flex; align-items:center; gap:6px;
+    transition:all .15s;
+  }
+  .actions button:hover{color:var(--text); border-color:#3a4150;}
+  .actions button:disabled{opacity:0.35; cursor:not-allowed;}
+  .actions button.save{color:var(--ok); border-color:rgba(79,214,168,0.3); background:var(--ok-soft);}
+  .actions button.save:hover{background:rgba(79,214,168,0.25);}
+  .actions button.download{color:var(--accent); border-color:rgba(124,111,255,0.3); background:var(--accent-soft);}
+  .actions button.download:hover{background:rgba(124,111,255,0.25);}
+  .actions button.del{color:var(--warn); border-color:rgba(255,107,107,0.25);}
+  .actions button.del:hover{background:var(--warn-soft);}
+  .actions button.view-toggle{display:none;}
+
+  .panes{
+    flex:1;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    min-height:0;
+  }
+  .pane{
+    min-width:0;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .pane-editor{border-right:1px solid var(--border);}
+  .pane-label{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    padding:8px 16px;
+    border-bottom:1px solid var(--border-soft);
+    background:var(--panel);
+    flex-shrink:0;
+  }
+  #editor{
+    flex:1;
+    resize:none;
+    border:none;
+    outline:none;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:1.65;
+    padding:16px 18px;
+    tab-size:2;
+  }
+  #editor::placeholder{color:var(--text-faint);}
+  #preview{
+    flex:1;
+    border:none;
+    background:#fff;
+  }
+
+  .statusbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 18px;
+    background:var(--panel);
+    border-top:1px solid var(--border);
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-faint);
+    flex-shrink:0;
+  }
+  .statusbar .st-left{display:flex; gap:16px; align-items:center;}
+  .status-dot{
+    display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:var(--text-faint); margin-right:6px;
+  }
+  .status-dot.saved{background:var(--ok);}
+  .status-dot.dirty{background:#e0a94f;}
+
+  .void-state{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:10px;
+    color:var(--text-faint);
+    font-family:var(--mono);
+    font-size:13px;
+    text-align:center;
+    padding:40px;
+  }
+  .void-state .big{font-size:34px; opacity:0.5;}
+
+  .toast{
+    position:fixed;
+    bottom:22px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:#20242c;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 16px;
+    border-radius:8px;
+    font-size:12.5px;
+    font-family:var(--mono);
+    opacity:0;
+    transition:all .25s ease;
+    pointer-events:none;
+    z-index:50;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.ok{border-color:rgba(79,214,168,0.4); color:var(--ok);}
+  .toast.warn{border-color:rgba(255,107,107,0.4); color:var(--warn);}
+
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(10,11,14,0.6);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:60;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    width:300px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  }
+  .modal h3{margin:0 0 8px; font-family:var(--display); font-size:15px;}
+  .modal p{margin:0 0 16px; font-size:12.5px; color:var(--text-dim); font-family:var(--mono); line-height:1.5;}
+  .modal .row{display:flex; gap:8px; justify-content:flex-end;}
+  .modal button{
+    border-radius:7px; padding:7px 12px; font-size:12.5px; font-weight:600; border:1px solid var(--border);
+    background:var(--panel-alt); color:var(--text-dim);
+  }
+  .modal button.confirm{background:var(--warn); border-color:var(--warn); color:#1a0d0d;}
+
+  .loading-screen{
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100;
+    color:var(--text-faint);
+    font-family:var(--mono);
+    font-size:13px;
+  }
+
+  /* Mobile */
+  @media (max-width: 760px){
+    .app{grid-template-columns: 1fr;}
+    .sidebar{
+      position:fixed; inset:0 30% 0 0; z-index:40;
+      transform:translateX(-100%);
+      transition:transform .2s ease;
+      width:74%;
+    }
+    .sidebar.open{transform:translateX(0);}
+    .panes{grid-template-columns:1fr;}
+    .pane-editor{border-right:none; border-bottom:1px solid var(--border);}
+    .panes.show-editor .pane-preview{display:none;}
+    .panes.show-preview .pane-editor{display:none;}
+    .actions button.view-toggle{display:flex;}
+    .actions .desktop-only-label{display:none;}
+    .sidebar-toggle{display:flex !important;}
+  }
+  .sidebar-toggle{
+    display:none;
+    background:var(--panel-alt); border:1px solid var(--border);
+    color:var(--text-dim); border-radius:7px; padding:8px 10px;
+    align-items:center; justify-content:center;
+  }
+  .sidebar-backdrop{
+    display:none;
+    position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:35;
+  }
+  .sidebar-backdrop.open{display:block;}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">загрузка мастерской…</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="app" id="app" style="visibility:hidden;">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark"><span class="dot"></span>Верстак</div>
+      <div class="sub">html-редактор // локальный</div>
+    </div>
+
+    <button class="new-file-btn" id="newFileToggle">+ Новый файл</button>
+    <div class="new-file-row" id="newFileRow">
+      <input type="text" id="newFileInput" placeholder="имя-файла" maxlength="60">
+      <button id="newFileConfirm">OK</button>
+    </div>
+
+    <div class="file-list" id="fileList"></div>
+  </aside>
+
+  <main class="workspace">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        <div class="filename-group" id="filenameGroup">
+          <input type="text" id="filenameInput" placeholder="имя-файла">
+          <span class="ext" id="extLabel">.html</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="view-toggle" id="viewToggle">Превью</button>
+        <button class="save" id="saveBtn">Сохранить</button>
+        <button class="download" id="downloadBtn">Скачать</button>
+        <button class="del" id="deleteBtn">Удалить</button>
+      </div>
+    </div>
+
+    <div class="panes show-editor" id="panes">
+      <div class="pane pane-editor">
+        <div class="pane-label">Код</div>
+        <textarea id="editor" placeholder="&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  ...
+&lt;/html&gt;" spellcheck="false"></textarea>
+      </div>
+      <div class="pane pane-preview">
+        <div class="pane-label">Превью</div>
+        <iframe id="preview" sandbox="allow-scripts"></iframe>
+      </div>
+    </div>
+
+    <div class="void-state" id="voidState" style="display:none;">
+      <div class="big">‹/›</div>
+      <div>Пока нет ни одного файла.<br>Создайте первый слева — «+ Новый файл».</div>
+    </div>
+
+    <div class="statusbar">
+      <div class="st-left">
+        <span><span class="status-dot" id="statusDot"></span><span id="statusText">—</span></span>
+        <span id="lineCount">0 строк</span>
+        <span id="charCount">0 символов</span>
+      </div>
+      <div id="fileCountLabel">0 файлов</div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Удалить файл?</h3>
+    <p id="deleteModalText">Это действие нельзя отменить.</p>
+    <div class="row">
+      <button id="deleteCancel">Отмена</button>
+      <button class="confirm" id="deleteConfirm">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DEFAULT_CONTENT = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Новая страница</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; }
+  </style>
+</head>
+<body>
+  <h1>Привет, мир!</h1>
+</body>
+</html>`;
+
+  let files = {};          // { name: content }
+  let activeFile = null;
+  let dirty = false;
+  let saveTimer = null;
+  let previewTimer = null;
+
+  const $ = (id) => document.getElementById(id);
+  const app = $('app');
+  const loadingScreen = $('loadingScreen');
+  const fileList = $('fileList');
+  const editor = $('editor');
+  const preview = $('preview');
+  const panes = $('panes');
+  const voidState = $('voidState');
+  const filenameInput = $('filenameInput');
+  const filenameGroup = $('filenameGroup');
+  const statusText = $('statusText');
+  const statusDot = $('statusDot');
+  const charCount = $('charCount');
+  const lineCount = $('lineCount');
+  const fileCountLabel = $('fileCountLabel');
+  const toast = $('toast');
+  const saveBtn = $('saveBtn');
+  const downloadBtn = $('downloadBtn');
+  const deleteBtn = $('deleteBtn');
+  const newFileToggle = $('newFileToggle');
+  const newFileRow = $('newFileRow');
+  const newFileInput = $('newFileInput');
+  const newFileConfirm = $('newFileConfirm');
+  const deleteModal = $('deleteModal');
+  const deleteModalText = $('deleteModalText');
+  const deleteCancel = $('deleteCancel');
+  const deleteConfirm = $('deleteConfirm');
+  const sidebarToggle = $('sidebarToggle');
+  const sidebar = $('sidebar');
+  const sidebarBackdrop = $('sidebarBackdrop');
+  const viewToggle = $('viewToggle');
+
+  function showToast(msg, type){
+    toast.textContent = msg;
+    toast.className = 'toast show' + (type ? (' ' + type) : '');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> toast.classList.remove('show'), 2200);
+  }
+
+  function sanitizeName(n){
+    return (n || '').trim().replace(/\.html?$/i, '').replace(/[\/\\?%*:|"<>]/g,'-').slice(0,60);
+  }
+
+  async function loadWorkspace(){
+    try{
+      const res = await window.storage.get('workspace', false);
+      if(res && res.value){
+        const data = JSON.parse(res.value);
+        files = data.files || {};
+        activeFile = data.active || null;
+      }
+    }catch(e){
+      files = {};
+      activeFile = null;
+    }
+    if(!activeFile || !files[activeFile]){
+      const names = Object.keys(files);
+      activeFile = names.length ? names[0] : null;
+    }
+    render();
+    loadingScreen.style.display = 'none';
+    app.style.visibility = 'visible';
+  }
+
+  function persist(showFeedback){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async ()=>{
+      try{
+        const payload = JSON.stringify({files, active: activeFile});
+        const result = await window.storage.set('workspace', payload, false);
+        if(!result) throw new Error('empty result');
+        dirty = false;
+        updateStatus('saved');
+        renderFileList();
+        if(showFeedback) showToast('Сохранено', 'ok');
+      }catch(e){
+        updateStatus('error');
+        showToast('Не удалось сохранить', 'warn');
+      }
+    }, showFeedback ? 0 : 500);
+  }
+
+  function updateStatus(state){
+    if(state === 'saved'){
+      statusDot.className = 'status-dot saved';
+      statusText.textContent = 'сохранено';
+    } else if(state === 'dirty'){
+      statusDot.className = 'status-dot dirty';
+      statusText.textContent = 'есть изменения';
+    } else if(state === 'error'){
+      statusDot.className = 'status-dot';
+      statusText.textContent = 'ошибка сохранения';
+    } else {
+      statusDot.className = 'status-dot';
+      statusText.textContent = '—';
+    }
+  }
+
+  function renderFileList(){
+    const names = Object.keys(files).sort((a,b)=>a.localeCompare(b));
+    fileCountLabel.textContent = names.length + (names.length === 1 ? ' файл' : ' файлов');
+    if(names.length === 0){
+      fileList.innerHTML = '<div class="empty-list">Список пуст.<br>Нажмите «+ Новый файл» выше.</div>';
+      return;
+    }
+    fileList.innerHTML = '';
+    names.forEach(name=>{
+      const item = document.createElement('div');
+      item.className = 'file-item' + (name === activeFile ? ' active' : '');
+      item.innerHTML = `<span class="fi-dot"></span><span class="fi-name">${escapeHtml(name)}.html</span><button class="fi-del" title="Удалить">✕</button>`;
+      item.querySelector('.fi-name').addEventListener('click', ()=> selectFile(name));
+      item.querySelector('.fi-dot').addEventListener('click', ()=> selectFile(name));
+      item.addEventListener('click', (e)=>{ if(e.target.classList.contains('fi-del')) return; selectFile(name); });
+      item.querySelector('.fi-del').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        askDelete(name);
+      });
+      fileList.appendChild(item);
+    });
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function render(){
+    renderFileList();
+    if(!activeFile){
+      panes.style.display = 'none';
+      voidState.style.display = 'flex';
+      filenameGroup.style.visibility = 'hidden';
+      saveBtn.disabled = true;
+      downloadBtn.disabled = true;
+      deleteBtn.disabled = true;
+      updateStatus('idle');
+      charCount.textContent = '';
+      lineCount.textContent = '';
+      return;
+    }
+    panes.style.display = 'grid';
+    voidState.style.display = 'none';
+    filenameGroup.style.visibility = 'visible';
+    saveBtn.disabled = false;
+    downloadBtn.disabled = false;
+    deleteBtn.disabled = false;
+    filenameInput.value = activeFile;
+    editor.value = files[activeFile];
+    updateCounts();
+    updatePreview();
+    updateStatus('saved');
+  }
+
+  function updateCounts(){
+    const val = editor.value;
+    charCount.textContent = val.length + ' символов';
+    lineCount.textContent = val.split('\n').length + ' строк';
+  }
+
+  function updatePreview(){
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(()=>{
+      preview.srcdoc = files[activeFile] || '';
+    }, 200);
+  }
+
+  function selectFile(name){
+    if(name === activeFile) return;
+    activeFile = name;
+    render();
+    persist(false);
+    closeSidebarMobile();
+  }
+
+  function createFile(rawName){
+    let name = sanitizeName(rawName);
+    if(!name){ showToast('Введите имя файла', 'warn'); return; }
+    if(files[name]){
+      let i = 2;
+      while(files[name + '-' + i]) i++;
+      name = name + '-' + i;
+    }
+    files[name] = DEFAULT_CONTENT;
+    activeFile = name;
+    render();
+    persist(true);
+    showToast('Файл «' + name + '.html» создан', 'ok');
+    newFileInput.value = '';
+    newFileRow.classList.remove('open');
+  }
+
+  function renameActiveFile(rawName){
+    if(!activeFile) return;
+    let name = sanitizeName(rawName);
+    if(!name){ filenameInput.value = activeFile; return; }
+    if(name === activeFile) return;
+    if(files[name]){
+      showToast('Файл с таким именем уже есть', 'warn');
+      filenameInput.value = activeFile;
+      return;
+    }
+    files[name] = files[activeFile];
+    delete files[activeFile];
+    activeFile = name;
+    render();
+    persist(true);
+    showToast('Переименовано', 'ok');
+  }
+
+  let pendingDelete = null;
+  function askDelete(name){
+    pendingDelete = name;
+    deleteModalText.textContent = 'Файл «' + name + '.html» будет удалён без возможности восстановления.';
+    deleteModal.classList.add('open');
+  }
+  deleteCancel.addEventListener('click', ()=>{ deleteModal.classList.remove('open'); pendingDelete = null; });
+  deleteConfirm.addEventListener('click', ()=>{
+    if(!pendingDelete){ deleteModal.classList.remove('open'); return; }
+    const wasActive = pendingDelete === activeFile;
+    delete files[pendingDelete];
+    if(wasActive){
+      const names = Object.keys(files);
+      activeFile = names.length ? names[0] : null;
+    }
+    deleteModal.classList.remove('open');
+    showToast('Файл удалён', 'ok');
+    pendingDelete = null;
+    render();
+    persist(true);
+  });
+
+  function downloadActiveFile(){
+    if(!activeFile) return;
+    const blob = new Blob([files[activeFile]], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = activeFile + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Файл скачан', 'ok');
+  }
+
+  // ---- events ----
+  editor.addEventListener('input', ()=>{
+    if(!activeFile) return;
+    files[activeFile] = editor.value;
+    dirty = true;
+    updateStatus('dirty');
+    updateCounts();
+    updatePreview();
+    persist(false);
+  });
+
+  editor.addEventListener('keydown', (e)=>{
+    if(e.key === 'Tab'){
+      e.preventDefault();
+      const start = editor.selectionStart, end = editor.selectionEnd;
+      editor.value = editor.value.slice(0,start) + '  ' + editor.value.slice(end);
+      editor.selectionStart = editor.selectionEnd = start + 2;
+      editor.dispatchEvent(new Event('input'));
+    }
+  });
+
+  filenameInput.addEventListener('blur', ()=> renameActiveFile(filenameInput.value));
+  filenameInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){ editor.focus(); }
+  });
+
+  saveBtn.addEventListener('click', ()=> persist(true));
+  downloadBtn.addEventListener('click', downloadActiveFile);
+  deleteBtn.addEventListener('click', ()=>{ if(activeFile) askDelete(activeFile); });
+
+  newFileToggle.addEventListener('click', ()=>{
+    newFileRow.classList.toggle('open');
+    if(newFileRow.classList.contains('open')) newFileInput.focus();
+  });
+  newFileConfirm.addEventListener('click', ()=> createFile(newFileInput.value));
+  newFileInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') createFile(newFileInput.value);
+    if(e.key === 'Escape'){ newFileRow.classList.remove('open'); newFileInput.value=''; }
+  });
+
+  function closeSidebarMobile(){
+    sidebar.classList.remove('open');
+    sidebarBackdrop.classList.remove('open');
+  }
+  sidebarToggle.addEventListener('click', ()=>{
+    sidebar.classList.add('open');
+    sidebarBackdrop.classList.add('open');
+  });
+  sidebarBackdrop.addEventListener('click', closeSidebarMobile);
+
+  viewToggle.addEventListener('click', ()=>{
+    if(panes.classList.contains('show-editor')){
+      panes.classList.remove('show-editor');
+      panes.classList.add('show-preview');
+      viewToggle.textContent = 'Код';
+    } else {
+      panes.classList.remove('show-preview');
+      panes.classList.add('show-editor');
+      viewToggle.textContent = 'Превью';
+    }
+  });
+
+  window.addEventListener('beforeunload', (e)=>{
+    if(dirty){ e.preventDefault(); e.returnValue = ''; }
+  });
+
+  loadWorkspace();
+})();
+</script>
+</body>
+</html>
