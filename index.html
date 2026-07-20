@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Верстак — редактор проектов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg: #14161b;
+    --panel: #1a1d24;
+    --panel-alt: #20242c;
+    --panel-alt2: #262b34;
+    --border: #2b303a;
+    --border-soft: #23272f;
+    --text: #e9ecf2;
+    --text-dim: #8b93a5;
+    --text-faint: #5a6273;
+    --accent: #7c6fff;
+    --accent-soft: rgba(124,111,255,0.14);
+    --css-col: #4fb8ff;
+    --css-soft: rgba(79,184,255,0.14);
+    --js-col: #e0a94f;
+    --js-soft: rgba(224,169,79,0.14);
+    --ok: #4fd6a8;
+    --ok-soft: rgba(79,214,168,0.14);
+    --warn: #ff6b6b;
+    --warn-soft: rgba(255,107,107,0.14);
+    --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    --display: 'Space Grotesk', 'Inter', sans-serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top left, rgba(124,111,255,0.06), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow:hidden;
+  }
+  ::selection{background:var(--accent-soft); color:var(--text);}
+  button{font-family:var(--sans); cursor:pointer;}
+  input{font-family:inherit;}
+
+  .app{
+    display:grid;
+    grid-template-columns: 260px 1fr;
+    height:100vh;
+  }
+
+  /* SIDEBAR */
+  .sidebar{
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .brand{
+    padding:18px 16px 12px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .brand .mark{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.01em;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .brand .mark .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .project-name-row{
+    display:flex; align-items:center; gap:6px;
+    margin-top:8px;
+  }
+  .project-name-row span{font-size:11px; color:var(--text-faint); font-family:var(--mono);}
+  .project-name-row input{
+    flex:1; min-width:0;
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    padding:5px 7px;
+    font-family:var(--mono);
+    font-size:12px;
+    outline:none;
+  }
+  .project-name-row input:focus{border-color:var(--accent);}
+
+  .mode-toggle{
+    display:flex;
+    margin-top:12px;
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:2px;
+    gap:2px;
+  }
+  .mode-toggle button{
+    flex:1;
+    background:none; border:none;
+    color:var(--text-faint);
+    font-family:var(--mono);
+    font-size:11px;
+    padding:6px 4px;
+    border-radius:6px;
+    font-weight:600;
+  }
+  .mode-toggle button.active{background:var(--panel-alt2); color:var(--text);}
+  .mode-toggle button:hover:not(.active){color:var(--text-dim);}
+
+  .tree-toolbar{
+    display:flex; gap:6px;
+    padding:12px 14px 4px;
+  }
+  .tree-toolbar button{
+    flex:1;
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    border-radius:7px;
+    padding:7px 8px;
+    font-size:12px;
+    font-weight:600;
+  }
+  .tree-toolbar button:hover{color:var(--text); border-color:#3a4150;}
+  .target-hint{
+    padding:2px 14px 8px;
+    font-size:10.5px;
+    font-family:var(--mono);
+    color:var(--text-faint);
+  }
+  .target-hint b{color:var(--accent); font-weight:600;}
+  .target-hint .reset-root{
+    color:var(--text-faint);
+    text-decoration:underline;
+    cursor:pointer;
+    margin-left:6px;
+  }
+  body.simple-mode #newFolderToggle,
+  body.simple-mode .target-hint{display:none;}
+
+  .new-item-row{
+    margin:0 14px 10px;
+    display:none;
+    gap:6px;
+  }
+  .new-item-row.open{display:flex;}
+  .new-item-row input{
+    flex:1; min-width:0;
+    background:var(--panel-alt);
+    border:1px solid var(--accent);
+    color:var(--text);
+    border-radius:6px;
+    padding:7px 8px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    outline:none;
+  }
+  .new-item-row button{
+    background:var(--accent);
+    border:none;
+    color:#fff;
+    border-radius:6px;
+    padding:0 10px;
+    font-size:12px;
+    font-weight:600;
+  }
+
+  .file-list{
+    flex:1;
+    overflow-y:auto;
+    padding:4px 8px 12px;
+  }
+  .tree-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 8px;
+    border-radius:6px;
+    cursor:pointer;
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:12.5px;
+    margin-bottom:1px;
+    border:1px solid transparent;
+    position:relative;
+    white-space:nowrap;
+  }
+  .tree-row:hover{background:var(--panel-alt); color:var(--text);}
+  .tree-row.active{
+    background:var(--panel-alt2);
+    color:var(--text);
+    border-color:var(--border);
+  }
+  .tree-row.target{outline:1px dashed var(--accent);}
+  .tree-row.active::before{
+    content:"";
+    position:absolute; left:-8px; top:50%; transform:translateY(-50%);
+    width:3px; height:60%;
+    background:var(--accent);
+    border-radius:2px;
+  }
+  .tree-row .caret{
+    width:12px; flex-shrink:0; color:var(--text-faint); font-size:10px;
+    transition:transform .12s;
+  }
+  .tree-row .caret.open{transform:rotate(90deg);}
+  .tree-row .tag{
+    flex-shrink:0;
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    padding:1px 4px;
+    border-radius:4px;
+    color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .tree-row .tag.css{color:var(--css-col); background:var(--css-soft);}
+  .tree-row .tag.js{color:var(--js-col); background:var(--js-soft);}
+  .tree-row .tag.dir{color:var(--text-dim); background:var(--panel-alt2);}
+  .tree-row .t-name{
+    flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis;
+  }
+  .tree-row .t-del{
+    opacity:0; color:var(--text-faint);
+    background:none; border:none; font-size:13px; padding:0 2px; line-height:1;
+    flex-shrink:0;
+  }
+  .tree-row:hover .t-del{opacity:1;}
+  .tree-row .t-del:hover{color:var(--warn);}
+
+  .empty-list{
+    color:var(--text-faint);
+    font-size:12px;
+    padding:14px 10px;
+    line-height:1.5;
+    font-family:var(--mono);
+  }
+
+  /* WORKSPACE */
+  .workspace{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    height:100vh;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 18px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel);
+    flex-wrap:wrap;
+  }
+  .filename-group{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--mono);
+    min-width:0;
+  }
+  .filename-group input{
+    font-size:14px; font-weight:600; color:var(--text);
+    background:transparent;
+    border:1px solid transparent;
+    max-width:280px;
+    padding:5px 7px; border-radius:6px;
+    font-family:var(--mono);
+    outline:none;
+  }
+  .filename-group input:hover, .filename-group input:focus{
+    background:var(--panel-alt);
+    border-color:var(--border);
+  }
+  .filename-group .empty-hint{
+    color:var(--text-faint);
+    font-size:13px;
+    font-family:var(--sans);
+  }
+
+  .actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .actions button{
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    border-radius:7px;
+    padding:8px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    display:flex; align-items:center; gap:6px;
+    transition:all .15s;
+  }
+  .actions button:hover{color:var(--text); border-color:#3a4150;}
+  .actions button:disabled{opacity:0.35; cursor:not-allowed;}
+  .actions button.save{color:var(--ok); border-color:rgba(79,214,168,0.3); background:var(--ok-soft);}
+  .actions button.save:hover{background:rgba(79,214,168,0.25);}
+  .actions button.zip{color:var(--accent); border-color:rgba(124,111,255,0.3); background:var(--accent-soft);}
+  .actions button.zip:hover{background:rgba(124,111,255,0.25);}
+  .actions button.upload{color:var(--css-col); border-color:rgba(79,184,255,0.3); background:var(--css-soft);}
+  .actions button.upload:hover{background:rgba(79,184,255,0.25);}
+  .actions button.del{color:var(--warn); border-color:rgba(255,107,107,0.25);}
+  .actions button.del:hover{background:var(--warn-soft);}
+  .actions button.term{color:var(--js-col); border-color:rgba(224,169,79,0.3);}
+  .actions button.term.active{background:var(--js-soft);}
+  .actions button.view-toggle{display:none;}
+
+  .main-split{
+    flex:1;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+  }
+  .panes{
+    flex:1;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    min-height:0;
+  }
+  .pane{
+    min-width:0;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .pane-editor{border-right:1px solid var(--border);}
+  .pane-label{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    padding:8px 14px;
+    border-bottom:1px solid var(--border-soft);
+    background:var(--panel);
+    flex-shrink:0;
+  }
+  .pane-label select{
+    background:var(--panel-alt); color:var(--text-dim);
+    border:1px solid var(--border); border-radius:5px;
+    font-family:var(--mono); font-size:10.5px; padding:3px 5px;
+    text-transform:none;
+  }
+  .device-toggle{display:flex; gap:4px;}
+  .device-toggle button{
+    background:var(--panel-alt); border:1px solid var(--border); color:var(--text-faint);
+    border-radius:5px; padding:3px 7px; font-size:10.5px; font-family:var(--mono);
+    text-transform:none;
+  }
+  .device-toggle button.active{color:var(--accent); border-color:rgba(124,111,255,0.4); background:var(--accent-soft);}
+
+  #editor{
+    flex:1;
+    resize:none;
+    border:none;
+    outline:none;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:1.65;
+    padding:16px 18px;
+    tab-size:2;
+  }
+  #editor::placeholder{color:var(--text-faint);}
+
+  .preview-stage{
+    flex:1;
+    min-height:0;
+    display:flex;
+    align-items:stretch;
+    justify-content:center;
+    background:#0e1015;
+    overflow:auto;
+    padding:0;
+    transition:padding .15s;
+  }
+  .preview-stage.mode-mobile{
+    padding:18px;
+    align-items:center;
+  }
+  #preview{
+    flex:1;
+    width:100%;
+    border:none;
+    background:#fff;
+  }
+  .phone-frame{
+    display:none;
+    width:100%; height:100%;
+  }
+  .preview-stage.mode-mobile .phone-frame{
+    display:flex;
+    flex-direction:column;
+    width:375px;
+    max-height:100%;
+    aspect-ratio: 375 / 812;
+    border:10px solid #26292f;
+    border-radius:34px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+    overflow:hidden;
+    background:#000;
+  }
+  .preview-stage.mode-mobile .phone-frame::before{
+    content:"";
+    display:block;
+    height:18px;
+    background:#26292f;
+    flex-shrink:0;
+  }
+  .preview-stage.mode-mobile #preview{border-radius:0 0 22px 22px;}
+  .preview-stage.mode-desktop .phone-frame{display:none;}
+  .preview-stage.mode-desktop #preview{display:block;}
+  .preview-stage.mode-mobile #preview.direct{display:none;}
+
+  /* TERMINAL */
+  .terminal-panel{
+    display:none;
+    flex-direction:column;
+    height:230px;
+    border-top:1px solid var(--border);
+    background:#101216;
+    flex-shrink:0;
+  }
+  .terminal-panel.open{display:flex;}
+  .terminal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:7px 14px;
+    border-bottom:1px solid var(--border-soft);
+    font-family:var(--mono);
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--text-faint);
+    flex-shrink:0;
+  }
+  .terminal-header .th-actions{display:flex; gap:14px;}
+  .terminal-header button{
+    background:none; border:none; color:var(--text-faint);
+    font-size:11px; text-transform:none; letter-spacing:0; font-family:var(--mono);
+  }
+  .terminal-header button:hover{color:var(--text);}
+  .terminal-log{
+    flex:1;
+    overflow-y:auto;
+    padding:8px 14px;
+    font-family:var(--mono);
+    font-size:12px;
+    line-height:1.65;
+  }
+  .terminal-line{white-space:pre-wrap; word-break:break-word; margin-bottom:2px;}
+  .terminal-line.cmd{color:var(--text-dim);}
+  .terminal-line.log{color:var(--text);}
+  .terminal-line.info{color:var(--css-col);}
+  .terminal-line.warn{color:var(--js-col);}
+  .terminal-line.error{color:var(--warn);}
+  .terminal-line.result{color:var(--ok);}
+  .terminal-line.hint{color:var(--text-faint);}
+  .terminal-input-row{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px;
+    border-top:1px solid var(--border-soft);
+    background:var(--panel);
+    flex-shrink:0;
+  }
+  .terminal-input-row .prompt{color:var(--accent); font-family:var(--mono); font-size:13px;}
+  .terminal-input-row input{
+    flex:1; background:transparent; border:none; outline:none;
+    color:var(--text); font-family:var(--mono); font-size:12.5px;
+  }
+  .terminal-input-row input::placeholder{color:var(--text-faint);}
+
+  .statusbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 18px;
+    background:var(--panel);
+    border-top:1px solid var(--border);
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-faint);
+    flex-shrink:0;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .statusbar .st-left{display:flex; gap:16px; align-items:center; flex-wrap:wrap;}
+  .status-dot{
+    display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:var(--text-faint); margin-right:6px;
+  }
+  .status-dot.saved{background:var(--ok);}
+  .status-dot.dirty{background:#e0a94f;}
+
+  .void-state{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:10px;
+    color:var(--text-faint);
+    font-family:var(--mono);
+    font-size:13px;
+    text-align:center;
+    padding:40px;
+  }
+  .void-state .big{font-size:34px; opacity:0.5;}
+
+  .toast{
+    position:fixed;
+    bottom:22px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:#20242c;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 16px;
+    border-radius:8px;
+    font-size:12.5px;
+    font-family:var(--mono);
+    opacity:0;
+    transition:all .25s ease;
+    pointer-events:none;
+    z-index:50;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    max-width:80vw;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.ok{border-color:rgba(79,214,168,0.4); color:var(--ok);}
+  .toast.warn{border-color:rgba(255,107,107,0.4); color:var(--warn);}
+
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(10,11,14,0.6);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:60;
+    padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    width:300px;
+    max-width:100%;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  }
+  .modal h3{margin:0 0 8px; font-family:var(--display); font-size:15px;}
+  .modal p{margin:0 0 16px; font-size:12.5px; color:var(--text-dim); font-family:var(--mono); line-height:1.5;}
+  .modal .row{display:flex; gap:8px; justify-content:flex-end;}
+  .modal button{
+    border-radius:7px; padding:7px 12px; font-size:12.5px; font-weight:600; border:1px solid var(--border);
+    background:var(--panel-alt); color:var(--text-dim);
+  }
+  .modal button.confirm{background:var(--warn); border-color:var(--warn); color:#1a0d0d;}
+
+  .loading-screen{
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100;
+    color:var(--text-faint);
+    font-family:var(--mono);
+    font-size:13px;
+  }
+
+  /* Mobile */
+  @media (max-width: 760px){
+    .app{grid-template-columns: 1fr;}
+    .sidebar{
+      position:fixed; inset:0 26% 0 0; z-index:40;
+      transform:translateX(-100%);
+      transition:transform .2s ease;
+      width:78%;
+    }
+    .sidebar.open{transform:translateX(0);}
+    .panes{grid-template-columns:1fr;}
+    .pane-editor{border-right:none; border-bottom:1px solid var(--border);}
+    .panes.show-editor .pane-preview{display:none;}
+    .panes.show-preview .pane-editor{display:none;}
+    .actions button.view-toggle{display:flex;}
+    .sidebar-toggle{display:flex !important;}
+    .preview-stage.mode-mobile .phone-frame{width:90vw; max-width:340px;}
+    .terminal-panel{height:180px;}
+  }
+  .sidebar-toggle{
+    display:none;
+    background:var(--panel-alt); border:1px solid var(--border);
+    color:var(--text-dim); border-radius:7px; padding:8px 10px;
+    align-items:center; justify-content:center;
+  }
+  .sidebar-backdrop{
+    display:none;
+    position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:35;
+  }
+  .sidebar-backdrop.open{display:block;}
+
+  .binary-preview{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    height:100%;
+    padding:30px;
+    text-align:center;
+    color:var(--text-dim);
+    font-family:var(--sans);
+  }
+  .binary-preview.show{display:flex;}
+  .binary-preview img{
+    max-width:100%;
+    max-height:280px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:
+      linear-gradient(45deg, #2a2e37 25%, transparent 25%),
+      linear-gradient(-45deg, #2a2e37 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2a2e37 75%),
+      linear-gradient(-45deg, transparent 75%, #2a2e37 75%);
+    background-size:16px 16px;
+    background-position:0 0, 0 8px, 8px -8px, -8px 0;
+  }
+  .binary-preview .bp-icon{
+    width:56px; height:56px;
+    border-radius:12px;
+    background:var(--panel-alt2);
+    border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+  }
+  .binary-preview .bp-name{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--text);
+    word-break:break-all;
+  }
+  .binary-preview .bp-note{
+    font-size:12px;
+    color:var(--text-faint);
+    max-width:320px;
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">загрузка мастерской…</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="app" id="app" style="visibility:hidden;">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark"><span class="dot"></span>Верстак</div>
+      <div class="project-name-row">
+        <span>проект:</span>
+        <input type="text" id="projectNameInput" value="my-site" maxlength="60">
+      </div>
+      <div class="mode-toggle" id="modeToggle">
+        <button class="mode-btn active" data-mode="project">Проект</button>
+        <button class="mode-btn" data-mode="simple">Простой</button>
+      </div>
+    </div>
+
+    <div class="tree-toolbar">
+      <button id="newFileToggle">+ Файл</button>
+      <button id="newFolderToggle">+ Папка</button>
+    </div>
+    <div class="target-hint">создаётся в: <b id="targetPathLabel">/</b><span class="reset-root" id="resetTarget">сбросить</span></div>
+    <div class="new-item-row" id="newItemRow">
+      <input type="text" id="newItemInput" placeholder="имя.html">
+      <button id="newItemConfirm">OK</button>
+    </div>
+
+    <div class="file-list" id="fileList"></div>
+  </aside>
+
+  <main class="workspace">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        <div class="filename-group" id="filenameGroup">
+          <input type="text" id="activePathInput" placeholder="нет файла">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="view-toggle" id="viewToggle">Превью</button>
+        <button class="term" id="terminalToggleBtn">Терминал</button>
+        <button id="clearBtn">Очистить код</button>
+        <button class="save" id="saveBtn">Сохранить</button>
+        <button id="downloadFileBtn">Скачать файл</button>
+        <button class="upload" id="uploadZipBtn">Загрузить .zip</button>
+        <input type="file" id="uploadZipInput" accept=".zip" style="display:none;">
+        <button class="zip" id="downloadZipBtn">Скачать .zip</button>
+        <button class="del" id="deleteBtn">Удалить</button>
+      </div>
+    </div>
+
+    <div class="main-split">
+      <div class="panes show-editor" id="panes">
+        <div class="pane pane-editor">
+          <div class="pane-label"><span id="editorLangLabel">Код</span></div>
+          <textarea id="editor" placeholder="выберите или создайте файл слева" spellcheck="false"></textarea>
+          <div class="binary-preview" id="binaryPreview"></div>
+        </div>
+        <div class="pane pane-preview">
+          <div class="pane-label">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span>Превью</span>
+              <select id="entrySelect" title="Какой HTML-файл открывать"></select>
+            </div>
+            <div class="device-toggle">
+              <button id="devDesktop" class="active">🖥 Компьютер</button>
+              <button id="devMobile">📱 Телефон</button>
+            </div>
+          </div>
+          <div class="preview-stage mode-desktop" id="previewStage">
+            <iframe id="preview" class="direct" sandbox="allow-scripts"></iframe>
+            <div class="phone-frame"><iframe id="previewMobile" sandbox="allow-scripts"></iframe></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="void-state" id="voidState" style="display:none;">
+        <div class="big">‹/›</div>
+        <div>В проекте пока нет файлов.<br>Нажмите «+ Файл» слева, например <b>index.html</b>.</div>
+      </div>
+
+      <div class="terminal-panel" id="terminalPanel">
+        <div class="terminal-header">
+          <span>Терминал · консоль запущенной страницы</span>
+          <div class="th-actions">
+            <button id="terminalClear">очистить</button>
+            <button id="terminalClose">свернуть ✕</button>
+          </div>
+        </div>
+        <div class="terminal-log" id="terminalLog"></div>
+        <div class="terminal-input-row">
+          <span class="prompt">›</span>
+          <input type="text" id="terminalInput" placeholder="JS-команда, например document.title или 2+2">
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div class="st-left">
+        <span><span class="status-dot" id="statusDot"></span><span id="statusText">—</span></span>
+        <span id="lineCount">0 строк</span>
+        <span id="charCount">0 символов</span>
+      </div>
+      <div id="fileCountLabel">0 файлов</div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h3 id="confirmTitle">Подтвердите</h3>
+    <p id="confirmText">Это действие нельзя отменить.</p>
+    <div class="row">
+      <button id="confirmCancel">Отмена</button>
+      <button class="confirm" id="confirmOk">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DEFAULT_HTML = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Новая страница</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Привет, мир!</h1>
+  <script src="script.js"><\/script>
+</body>
+</html>`;
+  const DEFAULT_CSS = `body {
+  font-family: sans-serif;
+  padding: 40px;
+  background: #fafafa;
+}`;
+  const DEFAULT_JS = `console.log("страница загружена");`;
+  const DEFAULT_OTHER = ``;
+
+  let projectName = 'my-site';
+  let files = {};          // { "path/to/file.ext": content }
+  let binaryFiles = new Set(); // paths whose files[] value is a data: URL (images, fonts, etc.)
+  let emptyFolders = [];   // paths of folders with no files, for persistence
+  let activeFile = null;
+  let entryFile = null;    // which .html is shown in preview
+  let expanded = new Set();
+  let targetFolder = '';   // where new items get created
+  let dirty = false;
+  let saveTimer = null;
+  let previewTimer = null;
+  let deviceMode = 'desktop';
+  let mode = 'project';    // 'project' | 'simple'
+  let terminalOpen = false;
+  let pendingAction = null; // {type:'delete'|'clear', path}
+
+  const $ = (id) => document.getElementById(id);
+  const app = $('app');
+  const loadingScreen = $('loadingScreen');
+  const fileList = $('fileList');
+  const editor = $('editor');
+  const binaryPreview = $('binaryPreview');
+  const preview = $('preview');
+  const previewMobile = $('previewMobile');
+  const previewStage = $('previewStage');
+  const panes = $('panes');
+  const voidState = $('voidState');
+  const activePathInput = $('activePathInput');
+  const editorLangLabel = $('editorLangLabel');
+  const statusText = $('statusText');
+  const statusDot = $('statusDot');
+  const charCount = $('charCount');
+  const lineCount = $('lineCount');
+  const fileCountLabel = $('fileCountLabel');
+  const toast = $('toast');
+  const saveBtn = $('saveBtn');
+  const clearBtn = $('clearBtn');
+  const downloadFileBtn = $('downloadFileBtn');
+  const downloadZipBtn = $('downloadZipBtn');
+  const uploadZipBtn = $('uploadZipBtn');
+  const uploadZipInput = $('uploadZipInput');
+  const deleteBtn = $('deleteBtn');
+  const newFileToggle = $('newFileToggle');
+  const newFolderToggle = $('newFolderToggle');
+  const newItemRow = $('newItemRow');
+  const newItemInput = $('newItemInput');
+  const newItemConfirm = $('newItemConfirm');
+  const targetPathLabel = $('targetPathLabel');
+  const resetTarget = $('resetTarget');
+  const confirmModal = $('confirmModal');
+  const confirmTitle = $('confirmTitle');
+  const confirmText = $('confirmText');
+  const confirmCancel = $('confirmCancel');
+  const confirmOk = $('confirmOk');
+  const sidebarToggle = $('sidebarToggle');
+  const sidebar = $('sidebar');
+  const sidebarBackdrop = $('sidebarBackdrop');
+  const viewToggle = $('viewToggle');
+  const projectNameInput = $('projectNameInput');
+  const entrySelect = $('entrySelect');
+  const devDesktop = $('devDesktop');
+  const devMobile = $('devMobile');
+  const modeToggle = $('modeToggle');
+  const terminalToggleBtn = $('terminalToggleBtn');
+  const terminalPanel = $('terminalPanel');
+  const terminalLog = $('terminalLog');
+  const terminalInput = $('terminalInput');
+  const terminalClear = $('terminalClear');
+  const terminalClose = $('terminalClose');
+  let newItemMode = 'file';
+
+  function showToast(msg, type){
+    toast.textContent = msg;
+    toast.className = 'toast show' + (type ? (' ' + type) : '');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=> toast.classList.remove('show'), 2200);
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function getExt(path){
+    const base = path.split('/').pop();
+    const i = base.lastIndexOf('.');
+    return i === -1 ? '' : base.slice(i+1).toLowerCase();
+  }
+  function isHtml(path){ const e = getExt(path); return e === 'html' || e === 'htm'; }
+  function langTag(ext){
+    if(ext==='html'||ext==='htm') return 'HTML';
+    if(ext==='css') return 'CSS';
+    if(ext==='js') return 'JS';
+    return ext ? ext.toUpperCase() : 'FILE';
+  }
+  function langClass(ext){
+    if(ext==='html'||ext==='htm') return '';
+    if(ext==='css') return 'css';
+    if(ext==='js') return 'js';
+    return '';
+  }
+  const MIME_TYPES = {
+    png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp',
+    bmp:'image/bmp', ico:'image/x-icon', tiff:'image/tiff',
+    woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf', otf:'font/otf', eot:'application/vnd.ms-fontobject',
+    mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', mp4:'video/mp4', webm:'video/webm', avi:'video/x-msvideo', mov:'video/quicktime',
+    pdf:'application/pdf', zip:'application/zip', rar:'application/vnd.rar', '7z':'application/x-7z-compressed', gz:'application/gzip', tar:'application/x-tar',
+    exe:'application/octet-stream', psd:'image/vnd.adobe.photoshop', ai:'application/postscript',
+    doc:'application/msword', docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls:'application/vnd.ms-excel', xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt:'application/vnd.ms-powerpoint', pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  };
+  function mimeFor(ext){ return MIME_TYPES[ext] || 'application/octet-stream'; }
+  function isImageExt(ext){ return ['png','jpg','jpeg','gif','webp','bmp','ico','tiff','svg'].includes(ext); }
+  // Returns something usable as a src/url for this file's content, whether it's a
+  // stored binary data: URL or a text asset (e.g. .svg) that can be inlined on the fly.
+  function assetDataUrl(path){
+    if(files[path] === undefined) return null;
+    if(binaryFiles.has(path)) return files[path];
+    const ext = getExt(path);
+    if(ext === 'svg') return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(files[path]);
+    return null;
+  }
+  function base64ToBlob(dataUrl, fallbackExt){
+    const match = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl);
+    const mime = match ? match[1] : mimeFor(fallbackExt);
+    const b64 = match ? match[2] : dataUrl;
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], {type: mime});
+  }
+  function defaultContentFor(path){
+    const ext = getExt(path);
+    if(ext==='html'||ext==='htm') return DEFAULT_HTML;
+    if(ext==='css') return DEFAULT_CSS;
+    if(ext==='js') return DEFAULT_JS;
+    return DEFAULT_OTHER;
+  }
+  function sanitizeSegment(n){
+    return (n||'').trim().replace(/[\\?%*:|"<>]/g,'-');
+  }
+  function sanitizePath(p){
+    return (p||'').split('/').map(sanitizeSegment).filter(s=>s!=='').join('/');
+  }
+  function joinPath(dir, name){
+    return dir ? dir + '/' + name : name;
+  }
+
+  // ---------- persistence ----------
+  async function loadWorkspace(){
+    try{
+      const res = await window.storage.get('workspace', false);
+      if(res && res.value){
+        const data = JSON.parse(res.value);
+        files = data.files || {};
+        binaryFiles = new Set(data.binaryFiles || []);
+        emptyFolders = data.emptyFolders || [];
+        activeFile = data.activeFile || null;
+        entryFile = data.entryFile || null;
+        projectName = data.projectName || 'my-site';
+        expanded = new Set(data.expanded || []);
+        mode = data.mode === 'simple' ? 'simple' : 'project';
+      }
+    }catch(e){
+      files = {}; binaryFiles = new Set(); emptyFolders = []; activeFile = null; entryFile = null;
+    }
+    if(Object.keys(files).length === 0 && emptyFolders.length === 0){
+      files['index.html'] = DEFAULT_HTML;
+      files['style.css'] = DEFAULT_CSS;
+      files['script.js'] = DEFAULT_JS;
+      activeFile = 'index.html';
+    }
+    if(!activeFile || files[activeFile] === undefined) activeFile = Object.keys(files)[0] || null;
+    projectNameInput.value = projectName;
+    applyMode(mode, true);
+    recomputeEntry();
+    render();
+    loadingScreen.style.display = 'none';
+    app.style.visibility = 'visible';
+  }
+
+  function persist(showFeedback){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async ()=>{
+      try{
+        const payload = JSON.stringify({
+          files, emptyFolders, activeFile, entryFile, projectName, mode,
+          expanded: Array.from(expanded),
+          binaryFiles: Array.from(binaryFiles)
+        });
+        const result = await window.storage.set('workspace', payload, false);
+        if(!result) throw new Error('empty result');
+        dirty = false;
+        updateStatus('saved');
+        if(showFeedback) showToast('Сохранено', 'ok');
+      }catch(e){
+        updateStatus('error');
+        showToast('Не удалось сохранить', 'warn');
+      }
+    }, showFeedback ? 0 : 500);
+  }
+
+  function updateStatus(state){
+    if(state === 'saved'){ statusDot.className = 'status-dot saved'; statusText.textContent = 'сохранено'; }
+    else if(state === 'dirty'){ statusDot.className = 'status-dot dirty'; statusText.textContent = 'есть изменения'; }
+    else if(state === 'error'){ statusDot.className = 'status-dot'; statusText.textContent = 'ошибка сохранения'; }
+    else { statusDot.className = 'status-dot'; statusText.textContent = '—'; }
+  }
+
+  // ---------- mode ----------
+  function applyMode(m, silent){
+    mode = m;
+    document.body.classList.toggle('simple-mode', mode==='simple');
+    modeToggle.querySelectorAll('.mode-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    if(mode === 'simple'){
+      targetFolder = '';
+      openTerminal();
+    }
+    if(!silent){ render(); persist(false); }
+  }
+  modeToggle.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.mode-btn');
+    if(!btn) return;
+    applyMode(btn.dataset.mode, false);
+  });
+
+  // ---------- tree ----------
+  function buildTree(){
+    const root = {type:'dir', name:'', path:'', children:{}};
+    function ensureDir(path){
+      if(!path) return root;
+      const parts = path.split('/');
+      let node = root, cur = '';
+      for(const p of parts){
+        cur = cur ? cur+'/'+p : p;
+        if(!node.children[p]) node.children[p] = {type:'dir', name:p, path:cur, children:{}};
+        node = node.children[p];
+      }
+      return node;
+    }
+    emptyFolders.forEach(f => ensureDir(f));
+    Object.keys(files).forEach(path=>{
+      const idx = path.lastIndexOf('/');
+      const dir = idx===-1 ? '' : path.slice(0,idx);
+      const name = idx===-1 ? path : path.slice(idx+1);
+      const parent = ensureDir(dir);
+      parent.children[name] = {type:'file', name, path};
+    });
+    return root;
+  }
+
+  function renderTreeNode(node, depth, container){
+    const keys = Object.keys(node.children).sort((a,b)=>{
+      const A = node.children[a], B = node.children[b];
+      if(A.type !== B.type) return A.type === 'dir' ? -1 : 1;
+      return a.localeCompare(b);
+    });
+    keys.forEach(key=>{
+      const n = node.children[key];
+      const row = document.createElement('div');
+      row.className = 'tree-row' + (n.path === activeFile ? ' active' : '') + (n.type==='dir' && n.path === targetFolder ? ' target' : '');
+      row.style.paddingLeft = (10 + depth*14) + 'px';
+      if(n.type === 'dir'){
+        const isOpen = expanded.has(n.path);
+        row.innerHTML = `<span class="caret ${isOpen?'open':''}">▸</span><span class="tag dir">DIR</span><span class="t-name">${escapeHtml(n.name)}</span><button class="t-del" title="Удалить папку">✕</button>`;
+        row.addEventListener('click', (e)=>{
+          if(e.target.classList.contains('t-del')) return;
+          if(isOpen) expanded.delete(n.path); else expanded.add(n.path);
+          targetFolder = n.path;
+          render();
+          persist(false);
+        });
+        row.querySelector('.t-del').addEventListener('click', (e)=>{
+          e.stopPropagation();
+          askDeleteFolder(n.path);
+        });
+        container.appendChild(row);
+        if(isOpen){
+          renderTreeNode(n, depth+1, container);
+        }
+      } else {
+        const ext = getExt(n.path);
+        row.innerHTML = `<span class="caret"></span><span class="tag ${langClass(ext)}">${langTag(ext)}</span><span class="t-name">${escapeHtml(n.name)}</span><button class="t-del" title="Удалить файл">✕</button>`;
+        row.addEventListener('click', (e)=>{
+          if(e.target.classList.contains('t-del')) return;
+          selectFile(n.path);
+        });
+        row.querySelector('.t-del').addEventListener('click', (e)=>{
+          e.stopPropagation();
+          askDeleteFile(n.path);
+        });
+        container.appendChild(row);
+      }
+    });
+  }
+
+  function renderFlatList(){
+    const paths = Object.keys(files).sort((a,b)=>a.localeCompare(b));
+    if(paths.length === 0){
+      fileList.innerHTML = '<div class="empty-list">Проект пуст.<br>Нажмите «+ Файл» выше.</div>';
+      return;
+    }
+    fileList.innerHTML = '';
+    paths.forEach(path=>{
+      const ext = getExt(path);
+      const row = document.createElement('div');
+      row.className = 'tree-row' + (path === activeFile ? ' active' : '');
+      row.style.paddingLeft = '10px';
+      row.innerHTML = `<span class="tag ${langClass(ext)}">${langTag(ext)}</span><span class="t-name">${escapeHtml(path)}</span><button class="t-del" title="Удалить файл">✕</button>`;
+      row.addEventListener('click', (e)=>{
+        if(e.target.classList.contains('t-del')) return;
+        selectFile(path);
+      });
+      row.querySelector('.t-del').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        askDeleteFile(path);
+      });
+      fileList.appendChild(row);
+    });
+  }
+
+  function renderFileList(){
+    const total = Object.keys(files).length;
+    fileCountLabel.textContent = total + (total % 10 === 1 && total % 100 !== 11 ? ' файл' : ' файлов');
+    if(mode === 'simple'){
+      renderFlatList();
+    } else {
+      if(total === 0 && emptyFolders.length === 0){
+        fileList.innerHTML = '<div class="empty-list">Проект пуст.<br>Нажмите «+ Файл» выше.</div>';
+      } else {
+        fileList.innerHTML = '';
+        const tree = buildTree();
+        renderTreeNode(tree, 0, fileList);
+      }
+      targetPathLabel.textContent = targetFolder ? '/'+targetFolder : '/';
+    }
+  }
+
+  // ---------- entry / preview ----------
+  function getHtmlFiles(){
+    return Object.keys(files).filter(isHtml).sort();
+  }
+  function recomputeEntry(){
+    const list = getHtmlFiles();
+    if(entryFile && list.includes(entryFile)) return;
+    entryFile = list.includes('index.html') ? 'index.html' : (list[0] || null);
+  }
+  function renderEntrySelect(){
+    const list = getHtmlFiles();
+    entrySelect.innerHTML = '';
+    if(list.length <= 1){
+      entrySelect.style.display = 'none';
+      return;
+    }
+    entrySelect.style.display = 'inline-block';
+    list.forEach(p=>{
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p;
+      if(p === entryFile) opt.selected = true;
+      entrySelect.appendChild(opt);
+    });
+  }
+  entrySelect.addEventListener('change', ()=>{
+    entryFile = entrySelect.value;
+    updatePreview();
+    persist(false);
+  });
+
+  function resolvePath(base, rel){
+    if(!rel) return null;
+    if(/^https?:\/\//i.test(rel) || rel.startsWith('//') || rel.startsWith('data:')) return null;
+    let r = rel.split('#')[0].split('?')[0];
+    if(r.startsWith('/')) r = r.slice(1);
+    else {
+      const baseDir = base.includes('/') ? base.slice(0, base.lastIndexOf('/')) : '';
+      r = baseDir ? baseDir + '/' + r : r;
+    }
+    const stack = [];
+    r.split('/').forEach(p=>{
+      if(p === '' || p === '.') return;
+      if(p === '..') stack.pop(); else stack.push(p);
+    });
+    return stack.join('/');
+  }
+
+  const TERMINAL_BRIDGE = `
+(function(){
+  function send(kind, level, args){
+    try{
+      parent.postMessage({__terminal:true, kind:kind, level:level, args:(args||[]).map(function(a){
+        try{ return typeof a==='object' ? JSON.stringify(a) : String(a); }catch(e){ return String(a); }
+      })}, '*');
+    }catch(e){}
+  }
+  ['log','info','warn','error'].forEach(function(level){
+    var orig = console[level];
+    console[level] = function(){
+      send('log', level, Array.prototype.slice.call(arguments));
+      if(orig) orig.apply(console, arguments);
+    };
+  });
+  window.addEventListener('error', function(e){
+    send('log', 'error', [e.message]);
+  });
+  window.addEventListener('message', function(e){
+    var d = e.data;
+    if(d && d.__terminal && d.kind === 'eval'){
+      try{
+        var result = window.eval(d.code);
+        send('log', 'result', [result === undefined ? 'undefined' : (typeof result === 'object' ? JSON.stringify(result) : String(result))]);
+      }catch(err){
+        send('log', 'error', [String(err)]);
+      }
+    }
+  });
+})();
+`;
+
+  function injectBridge(doc){
+    const s = doc.createElement('script');
+    s.textContent = TERMINAL_BRIDGE;
+    if(doc.body) doc.body.appendChild(s);
+  }
+
+  function rewriteCssUrls(css, basePath){
+    return css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (whole, quote, u)=>{
+      const trimmed = u.trim();
+      if(!trimmed || /^(https?:)?\/\//i.test(trimmed) || trimmed.startsWith('data:') || trimmed.startsWith('#')) return whole;
+      const resolved = resolvePath(basePath, trimmed);
+      const dataUrl = resolved ? assetDataUrl(resolved) : null;
+      return dataUrl ? 'url(' + dataUrl + ')' : whole;
+    });
+  }
+
+  // Rewrites <img>, icons, <source>, <video>/<audio> src+poster and inline style="" url()
+  // references so that images/fonts/media stored in the project actually render in preview.
+  function rewriteAssetRefs(doc, basePath){
+    const attrTargets = [
+      ['img[src]', 'src'],
+      ['source[src]', 'src'],
+      ['video[src]', 'src'],
+      ['video[poster]', 'poster'],
+      ['audio[src]', 'src'],
+      ['embed[src]', 'src'],
+      ['link[rel~="icon"][href]', 'href'],
+      ['object[data]', 'data']
+    ];
+    attrTargets.forEach(([selector, attr])=>{
+      doc.querySelectorAll(selector).forEach(el=>{
+        const val = el.getAttribute(attr);
+        if(!val) return;
+        const resolved = resolvePath(basePath, val);
+        const dataUrl = resolved ? assetDataUrl(resolved) : null;
+        if(dataUrl) el.setAttribute(attr, dataUrl);
+      });
+    });
+    doc.querySelectorAll('[style]').forEach(el=>{
+      el.setAttribute('style', rewriteCssUrls(el.getAttribute('style'), basePath));
+    });
+    doc.querySelectorAll('style').forEach(styleEl=>{
+      styleEl.textContent = rewriteCssUrls(styleEl.textContent, basePath);
+    });
+  }
+
+  function buildPreviewHtml(path, withBridge){
+    const src = files[path];
+    if(src === undefined) return '';
+    let doc;
+    try{
+      doc = new DOMParser().parseFromString(src, 'text/html');
+    }catch(e){ return src; }
+    doc.querySelectorAll('link[rel="stylesheet"]').forEach(link=>{
+      const href = link.getAttribute('href');
+      const resolved = resolvePath(path, href);
+      if(resolved && files[resolved] !== undefined && !binaryFiles.has(resolved)){
+        const style = doc.createElement('style');
+        style.textContent = rewriteCssUrls(files[resolved], resolved);
+        link.replaceWith(style);
+      }
+    });
+    doc.querySelectorAll('script[src]').forEach(script=>{
+      const src2 = script.getAttribute('src');
+      const resolved = resolvePath(path, src2);
+      if(resolved && files[resolved] !== undefined && !binaryFiles.has(resolved)){
+        const inline = doc.createElement('script');
+        inline.textContent = files[resolved];
+        script.replaceWith(inline);
+      }
+    });
+    rewriteAssetRefs(doc, path);
+    if(withBridge) injectBridge(doc);
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }
+
+  function updatePreview(){
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(()=>{
+      recomputeEntry();
+      renderEntrySelect();
+      if(!entryFile){
+        preview.srcdoc = '';
+        previewMobile.srcdoc = '';
+        return;
+      }
+      preview.srcdoc = buildPreviewHtml(entryFile, true);
+      previewMobile.srcdoc = buildPreviewHtml(entryFile, false);
+    }, 200);
+  }
+
+  // ---------- selection / editing ----------
+  function selectFile(path){
+    if(path === activeFile) return;
+    activeFile = path;
+    render();
+    persist(false);
+    closeSidebarMobile();
+  }
+
+  function render(){
+    renderFileList();
+    const hasFiles = Object.keys(files).length > 0;
+    if(!activeFile || files[activeFile] === undefined){
+      panes.style.display = hasFiles ? 'grid' : 'none';
+      voidState.style.display = hasFiles ? 'none' : 'flex';
+      activePathInput.value = '';
+      activePathInput.disabled = true;
+      saveBtn.disabled = true;
+      clearBtn.disabled = true;
+      downloadFileBtn.disabled = true;
+      deleteBtn.disabled = true;
+      editor.value = '';
+      editor.style.display = '';
+      binaryPreview.classList.remove('show');
+      binaryPreview.innerHTML = '';
+      updateStatus('idle');
+      charCount.textContent = ''; lineCount.textContent = '';
+      updatePreview();
+      return;
+    }
+    panes.style.display = 'grid';
+    voidState.style.display = 'none';
+    activePathInput.disabled = false;
+    saveBtn.disabled = false;
+    downloadFileBtn.disabled = false;
+    deleteBtn.disabled = false;
+    activePathInput.value = activeFile;
+    editorLangLabel.textContent = langTag(getExt(activeFile)) + ' · ' + activeFile;
+
+    const isBinary = binaryFiles.has(activeFile);
+    clearBtn.disabled = isBinary;
+    if(isBinary){
+      editor.style.display = 'none';
+      binaryPreview.classList.add('show');
+      const ext = getExt(activeFile);
+      const sizeBytes = Math.round((files[activeFile].length - files[activeFile].indexOf(',') - 1) * 0.75);
+      const sizeLabel = sizeBytes > 1024*1024 ? (sizeBytes/1024/1024).toFixed(1)+' МБ' : Math.max(1,Math.round(sizeBytes/1024))+' КБ';
+      if(isImageExt(ext)){
+        binaryPreview.innerHTML = `<img src="${files[activeFile]}" alt="${escapeHtml(activeFile)}">
+          <div class="bp-name">${escapeHtml(activeFile)}</div>
+          <div class="bp-note">${sizeLabel} · показывается предпросмотр, редактирование как текста недоступно. Файл будет включён в превью и .zip.</div>`;
+      } else {
+        binaryPreview.innerHTML = `<div class="bp-icon">📎</div>
+          <div class="bp-name">${escapeHtml(activeFile)}</div>
+          <div class="bp-note">${sizeLabel} · бинарный файл, редактирование как текста недоступно. Файл сохранится в проекте и попадёт в .zip при скачивании.</div>`;
+      }
+      charCount.textContent = ''; lineCount.textContent = '';
+    } else {
+      editor.style.display = '';
+      binaryPreview.classList.remove('show');
+      binaryPreview.innerHTML = '';
+      editor.value = files[activeFile];
+      updateCounts();
+    }
+    updatePreview();
+    updateStatus('saved');
+  }
+
+  function updateCounts(){
+    const val = editor.value;
+    charCount.textContent = val.length + ' символов';
+    lineCount.textContent = val.split('\n').length + ' строк';
+  }
+
+  editor.addEventListener('input', ()=>{
+    if(!activeFile || binaryFiles.has(activeFile)) return;
+    files[activeFile] = editor.value;
+    dirty = true;
+    updateStatus('dirty');
+    updateCounts();
+    updatePreview();
+    persist(false);
+  });
+
+  editor.addEventListener('keydown', (e)=>{
+    if(e.key === 'Tab'){
+      e.preventDefault();
+      const start = editor.selectionStart, end = editor.selectionEnd;
+      editor.value = editor.value.slice(0,start) + '  ' + editor.value.slice(end);
+      editor.selectionStart = editor.selectionEnd = start + 2;
+      editor.dispatchEvent(new Event('input'));
+    }
+  });
+
+  // ---------- rename ----------
+  activePathInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') activePathInput.blur();
+    if(e.key === 'Escape'){ activePathInput.value = activeFile; activePathInput.blur(); }
+  });
+  activePathInput.addEventListener('blur', ()=>{
+    if(!activeFile) return;
+    const raw = mode === 'simple' ? sanitizeSegment(activePathInput.value) : sanitizePath(activePathInput.value);
+    if(!raw || raw === activeFile){ activePathInput.value = activeFile; return; }
+    if(files[raw] !== undefined){
+      showToast('Файл с таким именем уже есть', 'warn');
+      activePathInput.value = activeFile;
+      return;
+    }
+    files[raw] = files[activeFile];
+    delete files[activeFile];
+    if(binaryFiles.has(activeFile)){ binaryFiles.delete(activeFile); binaryFiles.add(raw); }
+    activeFile = raw;
+    recomputeEntry();
+    render();
+    persist(true);
+    showToast('Переименовано', 'ok');
+  });
+
+  // ---------- create ----------
+  function openNewItemRow(mode2){
+    newItemMode = mode2;
+    newItemInput.placeholder = mode2 === 'file' ? 'имя.html / style.css / app.js' : 'имя-папки';
+    newItemRow.classList.add('open');
+    newItemInput.focus();
+  }
+  newFileToggle.addEventListener('click', ()=> openNewItemRow('file'));
+  newFolderToggle.addEventListener('click', ()=> openNewItemRow('folder'));
+  newItemConfirm.addEventListener('click', submitNewItem);
+  newItemInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') submitNewItem();
+    if(e.key === 'Escape'){ newItemRow.classList.remove('open'); newItemInput.value=''; }
+  });
+  resetTarget.addEventListener('click', ()=>{ targetFolder=''; render(); });
+
+  function submitNewItem(){
+    const raw = sanitizeSegment(newItemInput.value);
+    if(!raw){ showToast('Введите имя', 'warn'); return; }
+    const effTarget = mode === 'simple' ? '' : targetFolder;
+    if(newItemMode === 'folder' && mode !== 'simple'){
+      let path = joinPath(effTarget, raw);
+      const exists = emptyFolders.includes(path) || Object.keys(files).some(f=>f===path || f.startsWith(path+'/'));
+      if(exists){ showToast('Такая папка уже есть', 'warn'); return; }
+      emptyFolders.push(path);
+      expanded.add(path);
+      targetFolder = path;
+      showToast('Папка «' + path + '» создана', 'ok');
+    } else {
+      let name = raw.includes('.') ? raw : raw + '.html';
+      let path = joinPath(effTarget, name);
+      if(files[path] !== undefined){
+        const dot = name.lastIndexOf('.');
+        const base = dot===-1 ? name : name.slice(0,dot);
+        const ext = dot===-1 ? '' : name.slice(dot);
+        let i = 2;
+        while(files[joinPath(effTarget, base+'-'+i+ext)] !== undefined) i++;
+        path = joinPath(effTarget, base+'-'+i+ext);
+      }
+      files[path] = defaultContentFor(path);
+      emptyFolders = emptyFolders.filter(f=>f!==effTarget);
+      activeFile = path;
+      showToast('Файл «' + path + '» создан', 'ok');
+    }
+    newItemInput.value = '';
+    newItemRow.classList.remove('open');
+    recomputeEntry();
+    render();
+    persist(true);
+  }
+
+  // ---------- delete / clear ----------
+  function askDeleteFile(path){
+    pendingAction = {type:'delete-file', path};
+    confirmTitle.textContent = 'Удалить файл?';
+    confirmText.textContent = 'Файл «' + path + '» будет удалён без возможности восстановления.';
+    confirmModal.classList.add('open');
+  }
+  function askDeleteFolder(path){
+    pendingAction = {type:'delete-folder', path};
+    confirmTitle.textContent = 'Удалить папку?';
+    confirmText.textContent = 'Папка «' + path + '» и всё её содержимое будут удалены без возможности восстановления.';
+    confirmModal.classList.add('open');
+  }
+  function askClear(){
+    if(!activeFile) return;
+    pendingAction = {type:'clear', path: activeFile};
+    confirmTitle.textContent = 'Очистить код?';
+    confirmText.textContent = 'Содержимое файла «' + activeFile + '» будет полностью стёрто.';
+    confirmModal.classList.add('open');
+  }
+  deleteBtn.addEventListener('click', ()=>{ if(activeFile) askDeleteFile(activeFile); });
+  clearBtn.addEventListener('click', askClear);
+  confirmCancel.addEventListener('click', ()=>{ confirmModal.classList.remove('open'); pendingAction=null; });
+  confirmOk.addEventListener('click', ()=>{
+    if(!pendingAction){ confirmModal.classList.remove('open'); return; }
+    if(pendingAction.type === 'delete-file'){
+      const wasActive = pendingAction.path === activeFile;
+      delete files[pendingAction.path];
+      binaryFiles.delete(pendingAction.path);
+      if(wasActive) activeFile = Object.keys(files)[0] || null;
+      showToast('Файл удалён', 'ok');
+    } else if(pendingAction.type === 'delete-folder'){
+      const p = pendingAction.path;
+      Object.keys(files).forEach(f=>{ if(f===p || f.startsWith(p+'/')){ delete files[f]; binaryFiles.delete(f); } });
+      emptyFolders = emptyFolders.filter(f=> f!==p && !f.startsWith(p+'/'));
+      if(activeFile && (activeFile===p || activeFile.startsWith(p+'/'))) activeFile = Object.keys(files)[0] || null;
+      if(targetFolder === p || targetFolder.startsWith(p+'/')) targetFolder = '';
+      showToast('Папка удалена', 'ok');
+    } else if(pendingAction.type === 'clear'){
+      files[pendingAction.path] = '';
+      binaryFiles.delete(pendingAction.path);
+      if(pendingAction.path === activeFile) editor.value = '';
+      showToast('Код очищен', 'ok');
+    } else if(pendingAction.type === 'import-zip'){
+      files = pendingAction.files;
+      binaryFiles = pendingAction.binaryFiles || new Set();
+      emptyFolders = pendingAction.emptyFolders;
+      projectName = pendingAction.name;
+      projectNameInput.value = projectName;
+      expanded = new Set();
+      targetFolder = '';
+      const htmlCandidates = Object.keys(files).filter(p=> getExt(p)==='html' || getExt(p)==='htm');
+      activeFile = files['index.html'] !== undefined ? 'index.html' : (htmlCandidates[0] || Object.keys(files)[0] || null);
+      entryFile = null;
+      showToast('Проект загружен из архива' + (pendingAction.skipped ? ' (пропущено файлов: ' + pendingAction.skipped + ')' : ''), 'ok');
+    }
+    confirmModal.classList.remove('open');
+    pendingAction = null;
+    recomputeEntry();
+    render();
+    persist(true);
+  });
+
+  // ---------- download ----------
+  function downloadActiveFile(){
+    if(!activeFile) return;
+    const blob = binaryFiles.has(activeFile)
+      ? base64ToBlob(files[activeFile], getExt(activeFile))
+      : new Blob([files[activeFile]], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = activeFile.split('/').pop();
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Файл скачан', 'ok');
+  }
+  downloadFileBtn.addEventListener('click', downloadActiveFile);
+
+  async function downloadZip(){
+    if(typeof JSZip === 'undefined'){
+      showToast('Не удалось загрузить упаковщик .zip', 'warn');
+      return;
+    }
+    if(Object.keys(files).length === 0){
+      showToast('Нечего архивировать', 'warn');
+      return;
+    }
+    const zip = new JSZip();
+    const root = zip.folder(projectName || 'my-site');
+    Object.keys(files).forEach(path=>{
+      if(binaryFiles.has(path)){
+        const match = /^data:[^;]+;base64,(.*)$/s.exec(files[path]);
+        root.file(path, match ? match[1] : '', {base64:true});
+      } else {
+        root.file(path, files[path]);
+      }
+    });
+    emptyFolders.forEach(path=> root.folder(path));
+    try{
+      const blob = await zip.generateAsync({type:'blob'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (projectName || 'my-site') + '.zip';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Проект сохранён как .zip', 'ok');
+    }catch(e){
+      showToast('Ошибка при создании архива', 'warn');
+    }
+  }
+  downloadZipBtn.addEventListener('click', downloadZip);
+
+  // ---------- upload / import zip ----------
+  const BINARY_EXTENSIONS = new Set(['png','jpg','jpeg','gif','webp','bmp','ico','tiff',
+    'woff','woff2','ttf','otf','eot','mp3','mp4','wav','ogg','webm','avi','mov',
+    'pdf','zip','rar','7z','gz','tar','exe','psd','ai','doc','docx','xls','xlsx','ppt','pptx']);
+
+  function commonZipPrefix(paths){
+    const topSegments = new Set(paths.map(p => p.split('/')[0]));
+    if(topSegments.size !== 1) return '';
+    const only = Array.from(topSegments)[0];
+    const hasSubpaths = paths.some(p => p.split('/').length > 1);
+    return hasSubpaths ? only + '/' : '';
+  }
+
+  uploadZipBtn.addEventListener('click', ()=> uploadZipInput.click());
+  uploadZipInput.addEventListener('change', handleZipUpload);
+
+  async function handleZipUpload(e){
+    const file = e.target.files[0];
+    uploadZipInput.value = '';
+    if(!file) return;
+    if(typeof JSZip === 'undefined'){
+      showToast('Не удалось загрузить распаковщик .zip', 'warn');
+      return;
+    }
+    let zip;
+    try{
+      zip = await JSZip.loadAsync(file);
+    }catch(err){
+      showToast('Не удалось прочитать архив — файл повреждён или не .zip', 'warn');
+      return;
+    }
+
+    const entries = Object.keys(zip.files).filter(p=>{
+      if(p.startsWith('__MACOSX/')) return false;
+      const base = p.replace(/\/$/,'').split('/').pop();
+      if(base === '.DS_Store') return false;
+      return true;
+    });
+
+    if(entries.length === 0){
+      showToast('Архив пуст', 'warn');
+      return;
+    }
+
+    const stripPrefix = commonZipPrefix(entries);
+    const newFiles = {};
+    const newBinaryFiles = new Set();
+    const newEmptyFolders = [];
+    let skipped = 0;
+    let binaryCount = 0;
+    const MAX_BINARY_BYTES = 4 * 1024 * 1024; // guard against blowing past storage limits
+
+    for(const path of entries){
+      const zipEntry = zip.files[path];
+      const rel = stripPrefix && path.startsWith(stripPrefix) ? path.slice(stripPrefix.length) : path;
+      if(!rel) continue;
+      if(zipEntry.dir){
+        const p = sanitizePath(rel.replace(/\/$/,''));
+        if(p) newEmptyFolders.push(p);
+        continue;
+      }
+      const ext = getExt(rel);
+      const cleanPath = sanitizePath(rel);
+      if(!cleanPath) continue;
+      if(BINARY_EXTENSIONS.has(ext)){
+        try{
+          const base64 = await zipEntry.async('base64');
+          if(base64.length * 0.75 > MAX_BINARY_BYTES){
+            skipped++;
+            continue;
+          }
+          newFiles[cleanPath] = 'data:' + mimeFor(ext) + ';base64,' + base64;
+          newBinaryFiles.add(cleanPath);
+          binaryCount++;
+        }catch(err){
+          skipped++;
+        }
+        continue;
+      }
+      let content;
+      try{
+        content = await zipEntry.async('string');
+      }catch(err){
+        skipped++;
+        continue;
+      }
+      newFiles[cleanPath] = content;
+    }
+
+    if(Object.keys(newFiles).length === 0){
+      showToast('Архив не содержит файлов, которые можно загрузить', 'warn');
+      return;
+    }
+
+    pendingAction = {
+      type: 'import-zip',
+      files: newFiles,
+      binaryFiles: newBinaryFiles,
+      emptyFolders: newEmptyFolders,
+      name: sanitizeSegment(file.name.replace(/\.zip$/i, '')) || 'my-site',
+      skipped
+    };
+    confirmTitle.textContent = 'Загрузить проект из архива?';
+    confirmText.textContent = 'Текущий проект (' + Object.keys(files).length + ' файлов) будет заменён содержимым «' + file.name + '» (' +
+      Object.keys(newFiles).length + ' файлов' + (binaryCount ? ', из них медиа/бинарных: ' + binaryCount : '') +
+      (skipped ? ', пропущено (слишком большие или повреждённые): ' + skipped : '') +
+      '). Отменить это действие будет нельзя.';
+    confirmModal.classList.add('open');
+  }
+
+  // ---------- project name ----------
+  projectNameInput.addEventListener('input', ()=>{
+    projectName = sanitizeSegment(projectNameInput.value) || 'my-site';
+    persist(false);
+  });
+
+  // ---------- device toggle ----------
+  function setDevice(m){
+    deviceMode = m;
+    previewStage.className = 'preview-stage mode-' + m;
+    devDesktop.classList.toggle('active', m==='desktop');
+    devMobile.classList.toggle('active', m==='mobile');
+  }
+  devDesktop.addEventListener('click', ()=> setDevice('desktop'));
+  devMobile.addEventListener('click', ()=> setDevice('mobile'));
+
+  // ---------- terminal ----------
+  function appendTerminalLine(level, text){
+    const div = document.createElement('div');
+    div.className = 'terminal-line ' + level;
+    div.textContent = text;
+    terminalLog.appendChild(div);
+    terminalLog.scrollTop = terminalLog.scrollHeight;
+  }
+  function openTerminal(){
+    terminalOpen = true;
+    terminalPanel.classList.add('open');
+    terminalToggleBtn.classList.add('active');
+    if(!terminalLog.dataset.hinted){
+      appendTerminalLine('hint', 'Консоль страницы «' + (entryFile || '—') + '». console.log() из превью появится здесь, а команды из строки внизу выполняются прямо на странице.');
+      terminalLog.dataset.hinted = '1';
+    }
+  }
+  function closeTerminal(){
+    terminalOpen = false;
+    terminalPanel.classList.remove('open');
+    terminalToggleBtn.classList.remove('active');
+  }
+  terminalToggleBtn.addEventListener('click', ()=> terminalOpen ? closeTerminal() : openTerminal());
+  terminalClose.addEventListener('click', closeTerminal);
+  terminalClear.addEventListener('click', ()=>{ terminalLog.innerHTML=''; delete terminalLog.dataset.hinted; });
+
+  terminalInput.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter') return;
+    const code = terminalInput.value.trim();
+    if(!code) return;
+    appendTerminalLine('cmd', '› ' + code);
+    if(!entryFile){
+      appendTerminalLine('error', 'Нет HTML-файла для выполнения команд.');
+    } else {
+      try{
+        preview.contentWindow.postMessage({__terminal:true, kind:'eval', code}, '*');
+      }catch(err){
+        appendTerminalLine('error', String(err));
+      }
+    }
+    terminalInput.value = '';
+  });
+
+  window.addEventListener('message', (e)=>{
+    const d = e.data;
+    if(!d || !d.__terminal || d.kind !== 'log') return;
+    const text = (d.args || []).join(' ');
+    appendTerminalLine(d.level === 'result' ? 'result' : d.level, text);
+  });
+
+  // ---------- mobile sidebar / view ----------
+  function closeSidebarMobile(){
+    sidebar.classList.remove('open');
+    sidebarBackdrop.classList.remove('open');
+  }
+  sidebarToggle.addEventListener('click', ()=>{
+    sidebar.classList.add('open');
+    sidebarBackdrop.classList.add('open');
+  });
+  sidebarBackdrop.addEventListener('click', closeSidebarMobile);
+
+  viewToggle.addEventListener('click', ()=>{
+    if(panes.classList.contains('show-editor')){
+      panes.classList.remove('show-editor'); panes.classList.add('show-preview');
+      viewToggle.textContent = 'Код';
+    } else {
+      panes.classList.remove('show-preview'); panes.classList.add('show-editor');
+      viewToggle.textContent = 'Превью';
+    }
+  });
+
+  window.addEventListener('beforeunload', (e)=>{
+    if(dirty){ e.preventDefault(); e.returnValue = ''; }
+  });
+
+  loadWorkspace();
+})();
+</script>
+</body>
+</html>
